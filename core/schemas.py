@@ -3,8 +3,8 @@ Pydantic schemas used to validate structured (JSON) model output.
 Add new schemas here as you test additional structured task types.
 """
 
-from pydantic import BaseModel
 from typing import Literal
+from pydantic import BaseModel
 
 
 class TicketAnalysisSchema(BaseModel):
@@ -12,3 +12,4 @@ class TicketAnalysisSchema(BaseModel):
     priority: Literal["low", "medium", "high"]
     summary: str
     requires_escalation: bool
+

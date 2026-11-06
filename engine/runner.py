@@ -1,7 +1,16 @@
 """
+Execution and Engine Layer:
 Core functions for calling local models via Ollama, measuring performance,
-and handling both plain and JSON-structured prompts.
+collecting memory telemetry, and handling both plain and JSON-structured prompts.
 """
+
+import sys
+from pathlib import Path
+
+# Ensure project root is in sys.path when executed directly
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 
 import time
 import json
@@ -10,23 +19,26 @@ import re
 from ollama import chat
 from pydantic import ValidationError
 
-from schemas import TicketAnalysisSchema
+from core.schemas import TicketAnalysisSchema
 
 
-def get_model_memory_mb(model_name):
+def get_model_memory_mb(model_name: str) -> float | None:
     """Return the model's current RAM/VRAM usage in MB, via `ollama ps`."""
-    result = subprocess.run(["ollama", "ps"], capture_output=True, text=True)
-    for line in result.stdout.splitlines():
-        if model_name in line:
-            match = re.search(r'(\d+\.?\d*)\s*(GB|MB)', line)
-            if match:
-                size, unit = match.groups()
-                size = float(size)
-                return size * 1024 if unit == "GB" else size
+    try:
+        result = subprocess.run(["ollama", "ps"], capture_output=True, text=True, check=False)
+        for line in result.stdout.splitlines():
+            if model_name in line:
+                match = re.search(r'(\d+\.?\d*)\s*(GB|MB)', line)
+                if match:
+                    size, unit = match.groups()
+                    size = float(size)
+                    return size * 1024 if unit == "GB" else size
+    except Exception:
+        pass
     return None
 
 
-def run_model(model_name, prompt, temperature=None):
+def run_model(model_name: str, prompt: str, temperature: float | None = None) -> dict:
     """Call a local model via Ollama and return timing + token metrics."""
     start_time = time.perf_counter()
     options = {"temperature": temperature} if temperature is not None else {}
@@ -62,7 +74,7 @@ def run_model(model_name, prompt, temperature=None):
     }
 
 
-def build_structured_prompt(user_text):
+def build_structured_prompt(user_text: str) -> str:
     """Wrap raw ticket text with JSON-schema instructions."""
     return f"""Analyze the following text and respond ONLY with valid JSON in this exact format:
 {{
@@ -77,8 +89,8 @@ Text: {user_text}
 Respond with JSON only. No explanation, no markdown formatting."""
 
 
-def structured_prompt(model_name, user_text, max_retries=1):
-    """Run a structured (schema-validated) prompt, with one retry on invalid JSON."""
+def structured_prompt(model_name: str, user_text: str, max_retries: int = 1) -> dict:
+    """Run a structured (schema-validated) prompt, with retry on invalid JSON."""
     prompt = build_structured_prompt(user_text)
     attempt = 0
     result = None
@@ -107,7 +119,7 @@ def structured_prompt(model_name, user_text, max_retries=1):
     return result
 
 
-def general_prompt(model_name, prompt_text):
+def general_prompt(model_name: str, prompt_text: str) -> dict:
     """Run a plain prompt (Q&A, reasoning, summarization, creative) with no schema."""
     result = run_model(model_name, prompt_text)
     result["prompt_type"] = "general"

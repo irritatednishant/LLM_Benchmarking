@@ -38,24 +38,48 @@ A **repeatable, data-driven benchmark** that:
 
 ### Project Structure
 
-```
-LLM_Benchmarking/
+```text
+SLM App/
+├── core/                          # Configuration, prompts, & domain schemas
+│   ├── __init__.py
+│   ├── config.py                  # Model list & output paths
+│   ├── schemas.py                 # Pydantic models for structured output validation
+│   └── prompts.py                 # Standardized test suites (structured, Q&A, reasoning, etc.)
+├── engine/                        # Execution and inference engine
+│   ├── __init__.py
+│   ├── runner.py                  # Inference execution, timing, telemetry & retry loops
+│   └── client.py                  # OpenAI-compatible API client wrapper
+├── orchestration/                 # Benchmark pipeline & experiment runners
+│   ├── __init__.py
+│   ├── benchmark.py               # Main benchmark matrix orchestrator
+│   └── temperature.py             # Temperature variance evaluation runner
+├── persistence/                   # Data persistence layer
+│   ├── __init__.py
+│   └── storage.py                 # Streaming CSV writing and batch JSON dumping
+├── analytics/                     # Post-run reporting and data aggregation
+│   ├── __init__.py
+│   └── analyze.py                 # Speed, memory, and JSON schema validity summaries
 ├── notebooks/
-│   └── main.ipynb                 # Exploratory analysis & iterative testing
+│   └── main.ipynb                 # Interactive Jupyter notebook prototyping
+├── results/                       # Auto-generated benchmark outputs
+│   ├── results.csv                # Metrics per prompt
+│   └── results.json               # Full responses and metadata
+├── main.py                        # Unified CLI entry point for the platform
 ├── pyproject.toml                 # Project metadata & dependencies
-├── schemas.py                     # Pydantic models for structured output validation
-└── (future files as you develop)
-    ├── config.py                  # Model list & output paths
-    ├── model_runner.py            # Core: run_model() function + memory tracking
-    ├── prompts.py                 # Standardized prompt test suite
-    ├── benchmark.py               # MAIN: orchestrates full benchmark run
-    ├── storage.py                 # CSV/JSON saving utilities
-    ├── analyze.py                 # Aggregates & visualizes results
-    └── results/                   # Auto-generated output directory
-        ├── results.csv            # All runs (metrics only, no text)
-        ├── results.json           # Full results (includes responses)
-        ├── temperature_results.csv
-        └── temperature_results.json
+└── requirements.txt
+```
+
+### Quick Start CLI
+
+```bash
+# Run the complete multi-model benchmark suite
+python main.py benchmark
+
+# Run temperature variance test suite
+python main.py temperature
+
+# Analyze results and view comparative tables
+python main.py analyze
 ```
 
 ### Core Workflow

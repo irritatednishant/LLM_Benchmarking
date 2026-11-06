@@ -63,3 +63,4 @@ PROMPTS = [
 TEMPERATURE_TEST_PROMPTS = [p for p in PROMPTS if p["id"] in (
     "tic_01", "tic_03", "qa_02", "qa_05", "rs_01", "sm_01", "cr_01", "ec_05"
 )]
+

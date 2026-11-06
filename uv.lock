@@ -965,6 +965,7 @@ dependencies = [
     { name = "ollama" },
     { name = "openai" },
     { name = "pandas" },
+    { name = "pydantic" },
     { name = "requests" },
 ]
 
@@ -974,6 +975,7 @@ requires-dist = [
     { name = "ollama", specifier = ">=0.6.2" },
     { name = "openai", specifier = ">=2.45.0" },
     { name = "pandas", specifier = ">=3.0.6" },
+    { name = "pydantic", specifier = ">=2.0" },
     { name = "requests", specifier = ">=2.34.2" },
 ]
 

@@ -12,42 +12,48 @@ The application benchmarks local small language models (running through [Ollama]
 
 ```mermaid
 graph TD
-    subgraph Configuration & Definitions
-        CFG["config.py<br/>(Models, Paths)"]
-        PRM["prompts.py<br/>(Structured & General Suites)"]
-        SCH["schemas.py<br/>(Pydantic TicketAnalysisSchema)"]
+    subgraph Core Layer ["Core Layer (core/)"]
+        CFG["core/config.py<br/>(Models, Paths)"]
+        PRM["core/prompts.py<br/>(Structured & General Suites)"]
+        SCH["core/schemas.py<br/>(Pydantic TicketAnalysisSchema)"]
     end
 
-    subgraph Orchestration Layer
-        BNCH["benchmark.py<br/>(Main Test Suite Runner)"]
-        TEMP["temperature_test.py<br/>(Temperature Variance Runner)"]
+    subgraph Orchestration Layer ["Orchestration Layer (orchestration/)"]
+        MAIN["main.py<br/>(Unified CLI Entry Point)"]
+        BNCH["orchestration/benchmark.py<br/>(Main Test Suite Runner)"]
+        TEMP["orchestration/temperature.py<br/>(Temperature Variance Runner)"]
         NB["notebooks/main.ipynb<br/>(Interactive Exploration)"]
     end
 
-    subgraph Execution & Engine Layer
-        MR["model_runner.py"]
-        RM["model_runner.run_model()"]
-        SP["model_runner.structured_prompt()"]
-        GP["model_runner.general_prompt()"]
-        MEM["model_runner.get_model_memory_mb()"]
+    subgraph Execution & Engine Layer ["Execution & Engine Layer (engine/)"]
+        MR["engine/runner.py"]
+        RM["runner.run_model()"]
+        SP["runner.structured_prompt()"]
+        GP["runner.general_prompt()"]
+        MEM["runner.get_model_memory_mb()"]
+        CL["engine/client.py<br/>(OpenAI SDK Wrapper)"]
     end
 
-    subgraph Local Runtime Layer
+    subgraph Local Runtime Layer ["Local Runtime Layer"]
         OLLAMA_CHAT["ollama.chat() API"]
         OLLAMA_PS["ollama ps (CLI Subprocess)"]
     end
 
-    subgraph Persistence Layer
-        STR["storage.py"]
+    subgraph Persistence Layer ["Persistence Layer (persistence/)"]
+        STR["persistence/storage.py"]
         CSV["results/*.csv<br/>(Row-by-row, Metrics Only)"]
         JSON["results/*.json<br/>(Batch Dump, Full Data)"]
     end
 
-    subgraph Analytics Layer
-        ANZ["analyze.py<br/>(Pandas Performance & Validity Summaries)"]
+    subgraph Analytics Layer ["Analytics Layer (analytics/)"]
+        ANZ["analytics/analyze.py<br/>(Pandas Performance & Validity Summaries)"]
     end
 
     %% Dependencies
+    MAIN --> BNCH
+    MAIN --> TEMP
+    MAIN --> ANZ
+
     BNCH --> CFG
     BNCH --> PRM
     BNCH --> SP
@@ -73,18 +79,19 @@ graph TD
 
 ### Module Roster
 
-| Module | Primary Role | Key Symbols / Exports |
+| Module / Layer | Primary Role | Key Symbols / Exports |
 | :--- | :--- | :--- |
-| [config.py](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/config.py) | Configuration hub for model selection and target output paths | [`MODELS`](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/config.py#L6-L10), `RESULTS_CSV`, `RESULTS_JSON`, `TEMPERATURE_RESULTS_CSV`, `TEMPERATURE_RESULTS_JSON` |
-| [schemas.py](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/schemas.py) | Strict output contracts for structured tasks | [`TicketAnalysisSchema`](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/schemas.py#L10-L15) (Pydantic model) |
-| [prompts.py](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/prompts.py) | Standardized multi-category test prompts with unique IDs | [`PROMPTS`](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/prompts.py#L8-L59) (39 prompts), [`TEMPERATURE_TEST_PROMPTS`](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/prompts.py#L63-L65) (8 prompts) |
-| [model_runner.py](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/model_runner.py) | Inference calls, timing telemetry, memory probing, schema validation & retry | [`run_model()`](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/model_runner.py#L29-L63), [`structured_prompt()`](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/model_runner.py#L80-L108), [`general_prompt()`](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/model_runner.py#L110-L116), [`get_model_memory_mb()`](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/model_runner.py#L16-L26) |
-| [benchmark.py](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/benchmark.py) | Primary pipeline orchestrator for full benchmark matrix | [`main()`](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/benchmark.py#L17-L39) |
-| [temperature_test.py](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/temperature_test.py) | Determinism vs. creativity variance test runner | [`main()`](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/temperature_test.py#L19-L40), `TEMPERATURES`, `RUNS_PER_TEMPERATURE` |
-| [storage.py](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/storage.py) | Crash-safe dual storage (CSV stream & batch JSON) | [`save_to_csv()`](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/storage.py#L11-L25), [`save_to_json()`](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/storage.py#L27-L31) |
-| [analyze.py](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/analyze.py) | Aggregation, throughput statistics, and compliance reporting | [`summarize_performance()`](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/analyze.py#L13-L21), [`summarize_validity()`](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/analyze.py#L23-L28), [`main()`](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/analyze.py#L30-L52) |
-| [run_model.py](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/run_model.py) | Legacy OpenAI SDK-compatible wrapper connecting to Ollama | [`ask_llm()`](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/run_model.py#L10-L15) |
-| [notebooks/main.ipynb](file:///Users/irritatednishantgmail.com/Desktop/SLM%20App/notebooks/main.ipynb) | Interactive notebook for prototyping and iterative trial runs | Exploratory cells |
+| **`core/config.py`** | Configuration hub for model selection and target output paths | `MODELS`, `RESULTS_CSV`, `RESULTS_JSON`, `TEMPERATURE_RESULTS_CSV`, `TEMPERATURE_RESULTS_JSON` |
+| **`core/schemas.py`** | Strict output contracts for structured tasks | `TicketAnalysisSchema` (Pydantic model) |
+| **`core/prompts.py`** | Standardized multi-category test prompts with unique IDs | `PROMPTS` (39 prompts), `TEMPERATURE_TEST_PROMPTS` (8 prompts) |
+| **`engine/runner.py`** | Inference calls, timing telemetry, memory probing, schema validation & retry | `run_model()`, `structured_prompt()`, `general_prompt()`, `get_model_memory_mb()` |
+| **`engine/client.py`** | OpenAI SDK-compatible client wrapper connecting to Ollama | `ask_llm()`, `get_client()` |
+| **`orchestration/benchmark.py`** | Primary pipeline orchestrator for full benchmark matrix | `run_benchmark()`, `main()` |
+| **`orchestration/temperature.py`** | Determinism vs. creativity variance test runner | `run_temperature_test()`, `main()` |
+| **`persistence/storage.py`** | Crash-safe dual storage (CSV stream & batch JSON) | `save_to_csv()`, `save_to_json()` |
+| **`analytics/analyze.py`** | Aggregation, throughput statistics, and compliance reporting | `summarize_performance()`, `summarize_validity()`, `run_analysis()` |
+| **`main.py`** | Unified CLI entrypoint with subcommands | `main()`, `benchmark`, `temperature`, `analyze` |
+| **`notebooks/main.ipynb`** | Interactive notebook for prototyping and iterative trial runs | Exploratory cells |
 
 ---
 
