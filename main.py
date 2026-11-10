@@ -6,7 +6,8 @@ Unified interface to run benchmarks, execute temperature tests, or perform analy
 Usage:
     python main.py benchmark      Run the primary multi-model benchmark suite
     python main.py temperature    Run the temperature variance tests
-    python main.py analyze        Generate summary comparison tables from collected data
+    python main.py analyze        Generate comprehensive Rich comparison dashboard & academic report
+    python main.py serve          Launch FastAPI server and interactive web telemetry dashboard
 """
 
 import argparse
@@ -55,7 +56,29 @@ def main():
     # Command: analyze
     subparsers.add_parser(
         "analyze",
-        help="Compute speed, memory, and schema validity aggregations",
+        help="Compute speed, memory, latency percentiles, and schema validity aggregations",
+    )
+
+    # Command: serve
+    serve_parser = subparsers.add_parser(
+        "serve",
+        help="Launch the FastAPI web server and interactive telemetry dashboard",
+    )
+    serve_parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Host interface to bind (default: 127.0.0.1)",
+    )
+    serve_parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port number to listen on (default: 8000)",
+    )
+    serve_parser.add_argument(
+        "--reload",
+        action="store_true",
+        help="Enable auto-reload on code change",
     )
 
     args = parser.parse_args()
@@ -66,6 +89,11 @@ def main():
         run_temperature_test(models=args.models, runs_per_temperature=args.runs)
     elif args.command == "analyze":
         run_analysis()
+    elif args.command == "serve":
+        import uvicorn
+        print(f"\n🚀 Starting SLM Benchmark Web Platform at http://{args.host}:{args.port}/dashboard")
+        print(f"📖 Interactive Swagger API Docs at: http://{args.host}:{args.port}/docs\n")
+        uvicorn.run("api.app:app", host=args.host, port=args.port, reload=args.reload)
     else:
         parser.print_help()
         sys.exit(0)

@@ -1,1 +1,35 @@
+# Environment variables
 .env
+.env.*
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# Agent skills & cache
+.agents/
+
+# Logs
+*.log
+
+# Generated data and outputs
+results/
+outputs/
+*.csv
+*.json
+
+# OS files
+.DS_Store

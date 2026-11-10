@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SLM Benchmark & Diagnostic Platform</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #0b0f19;
+      color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .glass-card {
+      background: rgba(17, 24, 39, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .badge-glow {
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.35);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+
+  <!-- Top Navigation Bar -->
+  <header class="border-b border-slate-800 bg-slate-900/80 sticky top-0 z-50 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-500/30">
+          ⚡
+        </div>
+        <div>
+          <h1 class="text-lg font-bold bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">
+            SLM Benchmark & Diagnostics
+          </h1>
+          <p class="text-xs text-slate-400">Local Small Language Model Performance & Reliability Suite</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3 text-xs">
+        <span id="ollama-status-badge" class="px-2.5 py-1 rounded-full font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          Ollama: Online
+        </span>
+        <span id="host-spec-badge" class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700 hidden sm:inline-block">
+          Host: Loading...
+        </span>
+        <a href="/docs" target="_blank" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition shadow-sm">
+          Swagger Docs ↗
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- KPI Summary Row -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="kpi-container">
+      <div class="glass-card rounded-2xl p-5 border border-slate-800">
+        <div class="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
+          <span>Overall Leader</span>
+          <span class="text-amber-400 text-base">🥇</span>
+        </div>
+        <div class="mt-2 text-2xl font-black text-white" id="kpi-top-model">—</div>
+        <div class="mt-1 text-xs text-indigo-400 font-medium" id="kpi-top-score">Loading score...</div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-5 border border-slate-800">
+        <div class="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
+          <span>Speed Champion</span>
+          <span class="text-blue-400 text-base">⚡</span>
+        </div>
+        <div class="mt-2 text-2xl font-black text-white" id="kpi-fastest-speed">—</div>
+        <div class="mt-1 text-xs text-slate-400" id="kpi-fastest-model">Tokens / Sec</div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-5 border border-slate-800">
+        <div class="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
+          <span>Lowest RAM Footprint</span>
+          <span class="text-emerald-400 text-base">🪶</span>
+        </div>
+        <div class="mt-2 text-2xl font-black text-white" id="kpi-lowest-memory">—</div>
+        <div class="mt-1 text-xs text-emerald-400 font-medium" id="kpi-lowest-model">Edge Viable</div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-5 border border-slate-800">
+        <div class="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
+          <span>JSON Schema Reliability</span>
+          <span class="text-purple-400 text-base">🛡️</span>
+        </div>
+        <div class="mt-2 text-2xl font-black text-emerald-400" id="kpi-schema-rate">—</div>
+        <div class="mt-1 text-xs text-slate-400">Strict Pydantic Ticket Compliance</div>
+      </div>
+    </div>
+
+    <!-- Executive Recommendation Banner -->
+    <div class="glass-card rounded-2xl p-5 border border-indigo-500/30 bg-gradient-to-r from-indigo-950/40 via-slate-900 to-slate-900">
+      <div class="flex items-start space-x-3">
+        <div class="p-2 rounded-lg bg-indigo-500/20 text-indigo-300 font-bold text-lg">💡</div>
+        <div class="flex-grow">
+          <h2 class="text-sm font-semibold text-indigo-300 uppercase tracking-wide">Automated Diagnostic Verdict & Recommendation</h2>
+          <p class="mt-1 text-sm text-slate-200 leading-relaxed" id="executive-recommendation-text">
+            Analyzing telemetry from benchmark datastore...
+          </p>
+        </div>
+        <button onclick="openReportModal()" class="shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+          📄 Full Academic Report
+        </button>
+      </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="glass-card rounded-2xl p-5 border border-slate-800">
+        <h3 class="text-sm font-bold text-slate-200 mb-1 flex items-center gap-2">
+          <span>🚀 Generation Velocity vs. Memory Footprint</span>
+        </h3>
+        <p class="text-xs text-slate-400 mb-4">Throughput (Tokens/s) compared with active VRAM/RAM allocation (MB)</p>
+        <div class="h-64">
+          <canvas id="speedMemoryChart"></canvas>
+        </div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-5 border border-slate-800">
+        <h3 class="text-sm font-bold text-slate-200 mb-1 flex items-center gap-2">
+          <span>⏱️ Latency Percentiles (Median P50 vs P95 Tail)</span>
+        </h3>
+        <p class="text-xs text-slate-400 mb-4">Measures inference consistency and tail latency in seconds (lower is better)</p>
+        <div class="h-64">
+          <canvas id="latencyChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leaderboard Table -->
+    <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <span>🏆 Model Performance Leaderboard</span>
+          </h3>
+          <p class="text-xs text-slate-400">Ranked by normalized composite scoring (Speed, Schema, Memory, Latency)</p>
+        </div>
+        <div class="text-xs text-slate-400" id="total-samples-count">Total Datapoints: ...</div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-slate-300">
+          <thead class="bg-slate-900/90 text-xs uppercase tracking-wider text-slate-400 border-b border-slate-800">
+            <tr>
+              <th class="px-6 py-3 font-semibold">Rank</th>
+              <th class="px-6 py-3 font-semibold">Model</th>
+              <th class="px-6 py-3 font-semibold">Composite Score</th>
+              <th class="px-6 py-3 font-semibold">Speed (tok/s)</th>
+              <th class="px-6 py-3 font-semibold">P95 Latency</th>
+              <th class="px-6 py-3 font-semibold">RAM Usage</th>
+              <th class="px-6 py-3 font-semibold">Schema Pass</th>
+              <th class="px-6 py-3 font-semibold">Deployment Tier</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-tbody" class="divide-y divide-slate-800">
+            <tr>
+              <td colspan="8" class="px-6 py-6 text-center text-slate-500">Loading benchmark metrics...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Live Inference Playground & Tester -->
+    <div class="glass-card rounded-2xl p-6 border border-slate-800 space-y-6">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <span>🧪 Real-Time Live Inference Playground</span>
+          </h3>
+          <p class="text-xs text-slate-400">Trigger live inference against any local Ollama model to profile latency, tokens/s, and schema validation</p>
+        </div>
+        <span class="text-xs px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">
+          Ollama Client API
+        </span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Target Candidate Model</label>
+          <select id="playground-model" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+            <option value="llama3.2:3b">llama3.2:3b</option>
+            <option value="phi4-mini">phi4-mini</option>
+            <option value="mistral:7b">mistral:7b</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Evaluation Task Type</label>
+          <select id="playground-type" onchange="togglePromptMode()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+            <option value="structured">Structured JSON (Pydantic Ticket Analysis)</option>
+            <option value="general">General Generation / Reasoning / Q&A</option>
+          </select>
+        </div>
+
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label class="text-xs font-semibold text-slate-300">Temperature Setting</label>
+            <span id="temp-val" class="text-xs text-indigo-400 font-mono font-bold">0.0</span>
+          </div>
+          <input type="range" id="playground-temp" min="0" max="1" step="0.1" value="0.0" oninput="document.getElementById('temp-val').innerText = this.value" class="w-full accent-indigo-500">
+        </div>
+      </div>
+
+      <!-- Presets quick buttons -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 mb-1.5">Preset Sample Scenarios:</label>
+        <div class="flex flex-wrap gap-2 text-xs">
+          <button onclick="setPromptPreset('billing')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+            💳 Billing Double Charge (Structured)
+          </button>
+          <button onclick="setPromptPreset('server')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+            🚨 Production Server Down (Structured)
+          </button>
+          <button onclick="setPromptPreset('reasoning')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+            🧠 Train Logic Riddle (General)
+          </button>
+          <button onclick="setPromptPreset('creative')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+            ✨ Product Pitch Copy (General)
+          </button>
+        </div>
+      </div>
+
+      <!-- Prompt text area -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-300 mb-1">Input Prompt / Ticket Content</label>
+        <textarea id="playground-prompt" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 font-mono" placeholder="Type prompt text or click a preset above..."></textarea>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <button id="run-infer-btn" onclick="executeLiveInference()" class="px-6 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition flex items-center gap-2 shadow-lg shadow-indigo-600/30">
+          <span id="btn-spinner" class="hidden">⏳</span>
+          <span>⚡ Execute Real-Time Benchmark Inference</span>
+        </button>
+        <span class="text-xs text-slate-400">Streams live latency, throughput & memory telemetry</span>
+      </div>
+
+      <!-- Live Execution Telemetry Result Box -->
+      <div id="live-result-container" class="hidden border border-slate-800 rounded-xl bg-slate-950/70 p-5 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2 text-xs">
+            <span class="font-bold text-white text-sm" id="result-model-name">—</span>
+            <span id="result-valid-badge" class="px-2 py-0.5 rounded font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              Valid JSON Schema
+            </span>
+          </div>
+
+          <div class="flex items-center gap-4 text-xs font-mono">
+            <span class="text-slate-400">Latency: <strong class="text-indigo-300 font-bold" id="result-latency">—</strong></span>
+            <span class="text-slate-400">Speed: <strong class="text-emerald-300 font-bold" id="result-speed">—</strong></span>
+            <span class="text-slate-400">RAM: <strong class="text-purple-300 font-bold" id="result-memory">—</strong></span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Inference Output Response:</label>
+          <pre id="result-output" class="bg-slate-900 border border-slate-800 rounded-lg p-4 text-xs text-slate-200 overflow-x-auto font-mono whitespace-pre-wrap"></pre>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Report Modal -->
+  <div id="report-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="glass-card border border-slate-700 rounded-2xl max-w-4xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-bold text-white">📄 Academic Benchmark Evaluation Report</h3>
+          <p class="text-xs text-slate-400">Exported diagnostic findings for project submission</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <a href="/api/v1/analytics/report?download=true" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition">
+            ⬇ Download Markdown
+          </a>
+          <button onclick="closeReportModal()" class="text-slate-400 hover:text-white text-lg px-2">✕</button>
+        </div>
+      </div>
+      <div class="p-6 overflow-y-auto flex-grow bg-slate-950 font-mono text-xs text-slate-300 whitespace-pre-wrap" id="report-modal-content">
+        Loading report...
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
+    <p>SLM Benchmark Platform • MCA Research & Diagnostic Framework • Evaluated with Ollama Runtime</p>
+  </footer>
+
+  <!-- Dashboard JavaScript Logic -->
+  <script>
+    let speedChartInstance = null;
+    let latencyChartInstance = null;
+
+    // Load initial analytics data
+    async function fetchAnalyticsSummary() {
+      try {
+        const res = await fetch('/api/v1/analytics/summary');
+        const data = await res.json();
+
+        if (data.error) {
+          console.error(data.error);
+          return;
+        }
+
+        renderDashboard(data);
+      } catch (err) {
+        console.error('Error fetching analytics:', err);
+      }
+    }
+
+    function renderDashboard(data) {
+      const telemetry = data.telemetry || {};
+      const leaderboard = data.leaderboard || [];
+
+      // Host badges
+      document.getElementById('host-spec-badge').innerText = `Host: ${telemetry.os || 'macOS'} (${telemetry.total_ram_gb || 16} GB)`;
+      if (telemetry.ollama_running) {
+        document.getElementById('ollama-status-badge').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Ollama: Online';
+      }
+
+      // Populate Model Dropdown
+      const modelSelect = document.getElementById('playground-model');
+      if (telemetry.installed_models && telemetry.installed_models.length > 0) {
+        modelSelect.innerHTML = '';
+        telemetry.installed_models.forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m;
+          opt.innerText = m;
+          modelSelect.appendChild(opt);
+        });
+      }
+
+      // KPIs
+      if (leaderboard.length > 0) {
+        const top = leaderboard[0];
+        document.getElementById('kpi-top-model').innerText = top.model;
+        document.getElementById('kpi-top-score').innerText = `Composite Score: ${top.composite_score}/100`;
+
+        const fastest = [...leaderboard].sort((a,b) => b.avg_tokens_per_sec - a.avg_tokens_per_sec)[0];
+        document.getElementById('kpi-fastest-speed').innerText = `${fastest.avg_tokens_per_sec} tok/s`;
+        document.getElementById('kpi-fastest-model').innerText = `Leader: ${fastest.model}`;
+
+        const lightest = [...leaderboard].sort((a,b) => a.avg_memory_mb - b.avg_memory_mb)[0];
+        document.getElementById('kpi-lowest-memory').innerText = `${lightest.avg_memory_mb} MB`;
+        document.getElementById('kpi-lowest-model').innerText = `Leader: ${lightest.model}`;
+
+        document.getElementById('kpi-schema-rate').innerText = `${top.schema_validity_pct}%`;
+      }
+
+      // Executive recommendation
+      if (data.executive_recommendation) {
+        document.getElementById('executive-recommendation-text').innerHTML = data.executive_recommendation.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>');
+      }
+
+      document.getElementById('total-samples-count').innerText = `Total Datapoints: ${data.total_datapoints}`;
+
+      // Populate Leaderboard Table
+      const tbody = document.getElementById('leaderboard-tbody');
+      tbody.innerHTML = '';
+      leaderboard.forEach(item => {
+        const rankMedal = item.rank === 1 ? '🥇 1' : (item.rank === 2 ? '🥈 2' : (item.rank === 3 ? '🥉 3' : `#${item.rank}`));
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-slate-800/40 transition';
+        row.innerHTML = `
+          <td class="px-6 py-4 font-bold text-white">${rankMedal}</td>
+          <td class="px-6 py-4 font-semibold text-white">${item.model}</td>
+          <td class="px-6 py-4">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-emerald-400">${item.composite_score}</span>
+              <div class="w-16 bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                <div class="bg-emerald-400 h-1.5 rounded-full" style="width: ${item.composite_score}%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="px-6 py-4 font-mono">${item.avg_tokens_per_sec} tps</td>
+          <td class="px-6 py-4 font-mono text-slate-300">${item.p95_latency}s</td>
+          <td class="px-6 py-4 font-mono text-slate-300">${item.avg_memory_mb} MB</td>
+          <td class="px-6 py-4 font-semibold text-emerald-400">${item.schema_validity_pct}%</td>
+          <td class="px-6 py-4">
+            <span class="px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-300 border border-slate-700">
+              ${item.deploy_tier}
+            </span>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      // Render Charts
+      renderCharts(leaderboard);
+    }
+
+    function renderCharts(leaderboard) {
+      const labels = leaderboard.map(m => m.model);
+      const speeds = leaderboard.map(m => m.avg_tokens_per_sec);
+      const memories = leaderboard.map(m => m.avg_memory_mb);
+      const p50s = leaderboard.map(m => m.p50_latency);
+      const p95s = leaderboard.map(m => m.p95_latency);
+
+      // Speed vs Memory Chart
+      const ctx1 = document.getElementById('speedMemoryChart').getContext('2d');
+      if (speedChartInstance) speedChartInstance.destroy();
+      speedChartInstance = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Generation Speed (tok/s)',
+              data: speeds,
+              backgroundColor: 'rgba(99, 102, 241, 0.8)',
+              borderRadius: 6,
+              yAxisID: 'y',
+            },
+            {
+              label: 'Memory Footprint (MB)',
+              data: memories,
+              backgroundColor: 'rgba(16, 185, 129, 0.5)',
+              borderRadius: 6,
+              yAxisID: 'y1',
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              title: { display: true, text: 'Tokens / Sec', color: '#818cf8' },
+              grid: { color: 'rgba(255,255,255,0.05)' },
+              ticks: { color: '#94a3b8' }
+            },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              title: { display: true, text: 'RAM (MB)', color: '#34d399' },
+              grid: { drawOnChartArea: false },
+              ticks: { color: '#94a3b8' }
+            },
+            x: {
+              ticks: { color: '#f1f5f9' },
+              grid: { color: 'rgba(255,255,255,0.05)' }
+            }
+          },
+          plugins: {
+            legend: { labels: { color: '#e2e8f0', font: { size: 11 } } }
+          }
+        }
+      });
+
+      // Latency Chart
+      const ctx2 = document.getElementById('latencyChart').getContext('2d');
+      if (latencyChartInstance) latencyChartInstance.destroy();
+      latencyChartInstance = new Chart(ctx2, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Median Latency P50 (s)',
+              data: p50s,
+              backgroundColor: 'rgba(56, 189, 248, 0.8)',
+              borderRadius: 6,
+            },
+            {
+              label: 'Tail Latency P95 (s)',
+              data: p95s,
+              backgroundColor: 'rgba(244, 63, 94, 0.7)',
+              borderRadius: 6,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              title: { display: true, text: 'Latency (seconds)', color: '#94a3b8' },
+              grid: { color: 'rgba(255,255,255,0.05)' },
+              ticks: { color: '#94a3b8' }
+            },
+            x: {
+              ticks: { color: '#f1f5f9' },
+              grid: { color: 'rgba(255,255,255,0.05)' }
+            }
+          },
+          plugins: {
+            legend: { labels: { color: '#e2e8f0', font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    // Presets
+    const presets = {
+      billing: {
+        type: 'structured',
+        text: 'I was charged twice for my subscription this month, can someone look into this?'
+      },
+      server: {
+        type: 'structured',
+        text: 'Our production database crashed and customers cannot check out, this needs immediate escalation.'
+      },
+      reasoning: {
+        type: 'general',
+        text: 'A farmer has 17 sheep, all but 9 die. How many are left? Explain your step-by-step reasoning.'
+      },
+      creative: {
+        type: 'general',
+        text: 'Write a catchy tagline and a 2-sentence marketing pitch for a local artisanal espresso bar.'
+      }
+    };
+
+    function setPromptPreset(key) {
+      const p = presets[key];
+      if (!p) return;
+      document.getElementById('playground-type').value = p.type;
+      document.getElementById('playground-prompt').value = p.text;
+    }
+
+    // Live Inference Execution
+    async function executeLiveInference() {
+      const model = document.getElementById('playground-model').value;
+      const prompt_type = document.getElementById('playground-type').value;
+      const prompt = document.getElementById('playground-prompt').value.trim();
+      const temperature = parseFloat(document.getElementById('playground-temp').value);
+
+      if (!prompt) {
+        alert('Please enter or select a prompt first.');
+        return;
+      }
+
+      const btn = document.getElementById('run-infer-btn');
+      const spinner = document.getElementById('btn-spinner');
+      btn.disabled = true;
+      spinner.classList.remove('hidden');
+
+      try {
+        const res = await fetch('/api/v1/infer/single', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model, prompt, prompt_type, temperature })
+        });
+        const result = await res.json();
+
+        // Show result box
+        const container = document.getElementById('live-result-container');
+        container.classList.remove('hidden');
+
+        document.getElementById('result-model-name').innerText = result.model;
+        document.getElementById('result-latency').innerText = `${result.latency.toFixed(2)}s`;
+        document.getElementById('result-speed').innerText = `${result.tokens_per_second.toFixed(1)} tok/s`;
+        document.getElementById('result-memory').innerText = result.memory_mb ? `${result.memory_mb.toFixed(0)} MB` : 'N/A';
+
+        const validBadge = document.getElementById('result-valid-badge');
+        if (result.prompt_type === 'structured') {
+          if (result.valid_json) {
+            validBadge.className = 'px-2 py-0.5 rounded font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+            validBadge.innerText = '✔ Valid Pydantic Ticket Schema';
+          } else {
+            validBadge.className = 'px-2 py-0.5 rounded font-medium bg-rose-500/20 text-rose-400 border border-rose-500/30';
+            validBadge.innerText = '✘ Schema Validation Error';
+          }
+        } else {
+          validBadge.className = 'px-2 py-0.5 rounded font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30';
+          validBadge.innerText = 'General Inference';
+        }
+
+        const outBox = document.getElementById('result-output');
+        if (result.parsed) {
+          outBox.innerText = JSON.stringify(result.parsed, null, 2);
+        } else {
+          outBox.innerText = result.response;
+        }
+      } catch (err) {
+        alert('Error during inference: ' + err);
+      } finally {
+        btn.disabled = false;
+        spinner.classList.add('hidden');
+      }
+    }
+
+    // Academic report modal
+    async function openReportModal() {
+      const modal = document.getElementById('report-modal');
+      const content = document.getElementById('report-modal-content');
+      modal.classList.remove('hidden');
+      content.innerText = 'Loading benchmark report...';
+
+      try {
+        const res = await fetch('/api/v1/analytics/report');
+        const text = await res.text();
+        content.innerText = text;
+      } catch (e) {
+        content.innerText = 'Failed to load report: ' + e;
+      }
+    }
+
+    function closeReportModal() {
+      document.getElementById('report-modal').classList.add('hidden');
+    }
+
+    // Set initial preset
+    setPromptPreset('billing');
+    fetchAnalyticsSummary();
+  </script>
+</body>
+</html>
+

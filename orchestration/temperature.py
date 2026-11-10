@@ -36,8 +36,8 @@ def run_temperature_test(
 
     print(
         f"Starting temperature test: {len(models)} models, "
-        f"{len(prompts)} prompts, temperatures={temperatures}, "
-        f"runs_per_temp={runs_per_temperature}..."
+        f"{len(prompts)} prompts, temperatures= {temperatures}, "
+        f"runs_per_temp= {runs_per_temperature}..."
     )
 
     for model in models:
@@ -58,6 +58,14 @@ def run_temperature_test(
 
     save_to_json(all_results, filepath=results_json)
     print(f"\nDone. {len(all_results)} results saved to {results_csv} and {results_json}")
+
+    # Display comprehensive diagnostic summary in the final step
+    try:
+        from analytics.analyze import run_analysis
+        run_analysis(temp_results_csv=results_csv)
+    except Exception as e:
+        print(f"[warning] Could not render temperature telemetry dashboard: {e}")
+
     return all_results
 
 

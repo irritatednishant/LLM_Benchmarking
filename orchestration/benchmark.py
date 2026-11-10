@@ -56,6 +56,14 @@ def run_benchmark(
 
     save_to_json(all_results, filepath=results_json)
     print(f"\nDone. {len(all_results)} results saved to {results_csv} and {results_json}")
+
+    # Display comprehensive diagnostic summary in the final step
+    try:
+        from analytics.analyze import run_analysis
+        run_analysis(results_csv=results_csv)
+    except Exception as e:
+        print(f"[warning] Could not render benchmark telemetry dashboard: {e}")
+
     return all_results
 
 

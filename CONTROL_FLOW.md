@@ -25,6 +25,11 @@ graph TD
         NB["notebooks/main.ipynb<br/>(Interactive Exploration)"]
     end
 
+    subgraph Web & API Layer ["Web & API Layer (api/)"]
+        API["api/app.py<br/>(FastAPI REST Endpoints & Background Tasks)"]
+        DASH["api/templates/dashboard.html<br/>(Tailwind + Chart.js Dashboard)"]
+    end
+
     subgraph Execution & Engine Layer ["Execution & Engine Layer (engine/)"]
         MR["engine/runner.py"]
         RM["runner.run_model()"]
@@ -43,16 +48,23 @@ graph TD
         STR["persistence/storage.py"]
         CSV["results/*.csv<br/>(Row-by-row, Metrics Only)"]
         JSON["results/*.json<br/>(Batch Dump, Full Data)"]
+        RPT["results/BENCHMARK_REPORT.md<br/>(Academic Markdown Diagnostic Report)"]
     end
 
     subgraph Analytics Layer ["Analytics Layer (analytics/)"]
-        ANZ["analytics/analyze.py<br/>(Pandas Performance & Validity Summaries)"]
+        ANZ["analytics/analyze.py<br/>(Rich CLI Terminal Dashboard)"]
+        MTR["analytics/metrics.py<br/>(Composite Scoring, Latency Percentiles, Viability)"]
     end
 
     %% Dependencies
     MAIN --> BNCH
     MAIN --> TEMP
     MAIN --> ANZ
+    MAIN --> API
+    API --> DASH
+    API --> MTR
+    ANZ --> MTR
+    MTR --> RPT
 
     BNCH --> CFG
     BNCH --> PRM

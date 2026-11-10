@@ -40,6 +40,11 @@ A **repeatable, data-driven benchmark** that:
 
 ```text
 SLM App/
+├── api/                           # FastAPI web service & interactive dashboard
+│   ├── __init__.py
+│   ├── app.py                     # REST endpoints (health, leaderboard, playground, reports)
+│   └── templates/
+│       └── dashboard.html         # Modern web telemetry dashboard (Tailwind + Chart.js)
 ├── core/                          # Configuration, prompts, & domain schemas
 │   ├── __init__.py
 │   ├── config.py                  # Model list & output paths
@@ -56,14 +61,17 @@ SLM App/
 ├── persistence/                   # Data persistence layer
 │   ├── __init__.py
 │   └── storage.py                 # Streaming CSV writing and batch JSON dumping
-├── analytics/                     # Post-run reporting and data aggregation
+├── analytics/                     # Post-run reporting and diagnostic aggregation
 │   ├── __init__.py
-│   └── analyze.py                 # Speed, memory, and JSON schema validity summaries
+│   ├── analyze.py                 # Rich CLI terminal dashboard renderer
+│   └── metrics.py                 # Leaderboard composite scoring, P95 percentiles, report generator
 ├── notebooks/
 │   └── main.ipynb                 # Interactive Jupyter notebook prototyping
 ├── results/                       # Auto-generated benchmark outputs
 │   ├── results.csv                # Metrics per prompt
-│   └── results.json               # Full responses and metadata
+│   ├── results.json               # Full responses and metadata
+│   ├── temperature_results.csv    # Variance across temperature settings
+│   └── BENCHMARK_REPORT.md        # Academic markdown diagnostic report
 ├── main.py                        # Unified CLI entry point for the platform
 ├── pyproject.toml                 # Project metadata & dependencies
 └── requirements.txt
@@ -72,14 +80,19 @@ SLM App/
 ### Quick Start CLI
 
 ```bash
-# Run the complete multi-model benchmark suite
+# Run the complete multi-model benchmark suite (shows Rich telemetry dashboard at finish)
 python main.py benchmark
 
 # Run temperature variance test suite
 python main.py temperature
 
-# Analyze results and view comparative tables
+# Analyze results with full Rich visual dashboard & export academic report
 python main.py analyze
+
+# Launch the FastAPI web server & interactive dashboard
+python main.py serve
+# Open http://127.0.0.1:8000/dashboard (Interactive UI)
+# Open http://127.0.0.1:8000/docs (Swagger API Documentation)
 ```
 
 ### Core Workflow
