@@ -1,7 +1,7 @@
 # LOCAL SMALL LANGUAGE MODEL (SLM) BENCHMARK REPORT
 ## Empirical Performance, Schema Compliance & Reliability Analysis
 
-**Generated On:** 2026-11-10 11:41:07  
+**Generated On:** 2026-11-11 15:58:07  
 **Host Hardware:** Darwin (arm64) | Total RAM: 16.0 GB | CPU Threads: 10  
 **Runtime Engine:** Ollama Local Daemon (Active)  
 **Total Benchmark Runs:** 351 evaluations across 3 models

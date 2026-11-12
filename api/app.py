@@ -180,7 +180,6 @@ def run_single_inference(payload: InferenceRequest):
         if payload.prompt_type == "structured":
             # Run structured ticket schema validation
             res = structured_prompt(payload.model, payload.prompt)
-            # Ensure prompt_type is marked
             res["prompt_type"] = "structured"
             res["model"] = payload.model
             res["prompt"] = payload.prompt
@@ -191,7 +190,8 @@ def run_single_inference(payload: InferenceRequest):
             res["prompt_type"] = "general"
             res["valid_json"] = True
             res["parsed"] = None
-            return res
+            return res        # Ensure prompt_type is marked
+    
 
     except Exception as e:
         raise HTTPException(

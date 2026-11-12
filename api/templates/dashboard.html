@@ -1,640 +1,969 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SLM Benchmark & Diagnostic Platform</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#eef2ff',
-              500: '#6366f1',
-              600: '#4f46e5',
-              700: '#4338ca',
-            }
-          }
-        }
-      }
-    }
-  </script>
-  <style>
-    body {
-      background-color: #0b0f19;
-      color: #f1f5f9;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    .glass-card {
-      background: rgba(17, 24, 39, 0.75);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    .badge-glow {
-      box-shadow: 0 0 15px rgba(99, 102, 241, 0.35);
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLM Benchmark · Telemetry Suite</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<style>
+:root{
+  --bg:#FFFFFF;--panel:#FFFFFF;--raised:#F6F6F4;--line:#E6E6E4;--line2:#CCCCCC;
+  --text:#0A0A0A;--body:#242424;--muted:#666666;--faint:#969696;
+  --accent:#C6F432;--accent-ink:#0A0A0A;--tint:#F4FCD8;
+  --inv:#0A0A0A;--inv-ink:#FFFFFF;--mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  --radius:12px;
+}
+:root[data-theme=dark]{
+  --bg:#0A0A0C;--panel:#111215;--raised:#17181D;--line:#22242B;--line2:#32353E;
+  --text:#F5F6F8;--body:#D0D3DB;--muted:#8A8F9E;--faint:#585C68;
+  --tint:rgba(198,244,50,.08);--inv:#F5F6F8;--inv-ink:#0A0A0C;
+}
+*{box-sizing:border-box}
+::selection{background:var(--accent);color:#0A0A0A}
+html,body{margin:0;min-height:100%}
+body{
+  background:var(--bg);color:var(--text);
+  font:13.5px/1.55 'Manrope',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  font-feature-settings:"cv02","cv03","cv04","cv11";
+  -webkit-font-smoothing:antialiased;
+  transition:background .2s ease,color .2s ease;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:inherit}
+.hidden{display:none!important}
+
+/* Layout */
+.app{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+.sidebar{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:24px;padding:24px 18px;background:var(--bg);border-right:1px solid var(--line);z-index:20}
+.brand{display:flex;align-items:center;gap:12px;padding:0 4px}
+.logo{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);flex-shrink:0}
+.brand-name{font-weight:800;font-size:14px;letter-spacing:-.015em}
+.brand-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.nav{display:flex;flex-direction:column;gap:3px}
+.nav-btn{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;border:0;border-radius:10px;
+  background:none;color:var(--muted);font-weight:600;font-size:13px;text-align:left;cursor:pointer;
+  white-space:nowrap;transition:background .15s ease,color .15s ease,transform .1s ease;
+}
+.nav-btn:hover{color:var(--text);background:var(--raised)}
+.nav-btn:active{transform:scale(.98)}
+.nav-btn.active{color:var(--accent-ink);background:var(--accent);font-weight:700}
+.n{font:600 11px var(--mono);color:var(--faint);letter-spacing:-.02em}
+.nav-btn.active .n{color:var(--accent-ink)}
+
+.side-foot{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding:14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
+.status{display:flex;align-items:center;gap:8px;font:600 11.5px var(--mono);color:var(--text)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:blink 2s infinite}
+:root[data-theme=light] .dot{background:#10B981}
+.status.off{color:var(--muted)}
+.status.off .dot{background:none;border:1.5px solid currentColor;animation:none}
+@keyframes blink{50%{opacity:.3}}
+.host{font:500 11px/1.5 var(--mono);color:var(--muted)}
+.meta{font:500 11px var(--mono);color:var(--faint)}
+
+.content{min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:15;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;padding:24px 36px 18px;background:var(--bg);border-bottom:1px solid var(--line)}
+.eyebrow{display:inline-block;margin:0;padding:2.5px 7px;border-radius:4px;background:var(--accent);color:var(--accent-ink);font:700 10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase}
+.label{font:600 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{margin:6px 0 0;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.actions,.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.row.between{justify-content:space-between}
+.row.end{justify-content:flex-end}
+.push{margin-left:auto}
+
+main{padding:28px 36px 24px;flex:1}
+.stack{display:flex;flex-direction:column;gap:16px}
+.view{animation:rise .25s cubic-bezier(0.16, 1, 0.3, 1)}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;height:34px;padding:0 14px;
+  border-radius:9px;border:1px solid var(--line2);background:var(--panel);color:var(--text);
+  font-size:12.5px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;
+  transition:background .15s ease,border-color .15s ease,transform .1s cubic-bezier(0.2,0,0,1);
+}
+.btn:hover{background:var(--raised);border-color:var(--text)}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.btn.primary:hover{filter:brightness(.95);border-color:var(--accent)}
+.btn:disabled,.btn.busy{opacity:.55;pointer-events:none}
+.btn.sm{height:28px;padding:0 10px;font-size:11.5px;border-radius:7px}
+.btn.lg{height:40px;padding:0 18px;font-size:13px}
+
+/* Cards & Surfaces */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;min-width:0;box-shadow:0 1px 3px rgba(0,0,0,.03)}
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
+.card h3{margin:0;font-size:15px;font-weight:700;letter-spacing:-.01em}
+.card-head p{margin:4px 0 0;font-size:12px;color:var(--muted);max-width:62ch;line-height:1.5}
+.unit{font:600 11px var(--mono);color:var(--faint);white-space:nowrap}
+
+/* Badges & Pills */
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;border:1px solid var(--line2);color:var(--muted);font:500 11px var(--mono);white-space:nowrap}
+.pill.ok{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.pill.bad{background:var(--inv);border-color:var(--inv);color:var(--inv-ink);font-weight:700}
+.pill.accent{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+
+/* Use cases grid */
+.usecases{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.case{
+  display:flex;flex-direction:column;gap:6px;padding:18px;text-align:left;cursor:pointer;
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;color:var(--text);
+  transition:border-color .15s ease,transform .12s cubic-bezier(0.2,0,0,1),box-shadow .15s ease;
+}
+.case:hover{border-color:var(--line2);transform:translateY(-1px)}
+.case:active{transform:scale(.985)}
+.case.active{border-color:var(--text);box-shadow:inset 0 4px 0 var(--accent)}
+.case-name{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.idx{font:600 11px var(--mono);color:var(--faint)}
+.case-model{margin-top:8px;font:700 18px var(--mono);letter-spacing:-.01em}
+.case-metric b{font:800 26px var(--mono);font-variant-numeric:tabular-nums}
+.case-metric span{margin-left:6px;font-size:12px;color:var(--muted);font-weight:500}
+.case-sub{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* Verdict */
+.verdict{position:relative;overflow:hidden;padding:22px 24px}
+.verdict::before{content:"";position:absolute;inset:0 0 auto;height:4px;background:var(--accent)}
+.verdict p{margin:12px 0 0;font-size:14px;line-height:1.65;color:var(--body);max-width:96ch}
+.verdict strong{color:var(--text);font-weight:700}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.chart{position:relative;height:280px;width:100%}
+
+/* Tables */
+.table-card{padding:0;overflow:hidden}
+.table-card .card-head{margin:0;padding:20px;border-bottom:1px solid var(--line)}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:12px 16px;text-align:left;font:600 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:13px 16px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--raised)}
+tr.winner td{background:var(--tint)}
+tr.winner td:first-child{box-shadow:inset 4px 0 var(--text)}
+.empty{text-align:center;color:var(--faint);padding:32px!important}
+.rank{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:7px;border:1px solid var(--line2);font:700 11.5px var(--mono);color:var(--muted)}
+.rank.r1{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.mname{font:700 13px var(--mono)}
+.sub{font-size:11px;color:var(--faint);margin-top:2px}
+.mono{font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+small{font-size:11px;color:var(--faint)}
+.score{display:flex;align-items:center;gap:10px}
+.score b{min-width:32px;font:700 12.5px var(--mono)}
+.bar{width:110px;height:6px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar.thin{width:120px}
+.bar i{display:block;height:100%;border-radius:inherit;background:var(--text)}
+.sd{display:flex;flex-direction:column;gap:5px}
+.muted{color:var(--muted)}
+.faint{color:var(--faint)}
+.hot{background:var(--accent);color:var(--accent-ink);padding:1px 5px;border-radius:4px;font-weight:700}
+
+/* Form Workbench */
+.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.field{display:flex;flex-direction:column;gap:8px}
+.field label{font-size:12px;font-weight:700;color:var(--text)}
+select,textarea{width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--line2);background:var(--bg);color:var(--text);outline:none;transition:border-color .15s}
+select:focus,textarea:focus{border-color:var(--text);box-shadow:0 0 0 2px var(--accent)}
+textarea{font:12.5px/1.6 var(--mono);resize:vertical}
+input[type=range]{accent-color:var(--text)}
+
+.presets{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px;border-radius:999px;
+  border:1px solid var(--line2);background:var(--bg);color:var(--body);font-size:12px;font-weight:500;
+  cursor:pointer;transition:border-color .15s ease,color .15s ease,transform .1s ease;
+}
+.chip:hover{border-color:var(--text);color:var(--text)}
+.chip:active{transform:scale(.97)}
+.chip i{width:7px;height:7px;border-radius:50%;border:1px solid var(--text)}
+
+.kv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.kv{padding:10px 12px;border-radius:9px;background:var(--bg);border:1px solid var(--line)}
+.kv span{display:block;font:600 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.kv b{font-size:13.5px;word-break:break-word;margin-top:2px;display:block}
+
+.result-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.metrics{display:flex;gap:20px}
+.metrics span{display:block;font:600 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.metrics b{font:700 14px var(--mono)}
+pre{margin:8px 0 0;padding:14px;max-height:340px;overflow:auto;border-radius:9px;background:var(--raised);border:1px solid var(--line);font:12px/1.6 var(--mono);color:var(--body);white-space:pre-wrap}
+
+.callout{border-left:3px solid var(--accent);background:var(--raised);border-radius:0 12px 12px 0;padding:16px 18px}
+.callout b{font-size:13px;font-weight:700}
+.callout p{margin:6px 0 0;font-size:12.5px;line-height:1.65;color:var(--body)}
+code{font:11.5px var(--mono);padding:2px 5px;border-radius:4px;background:var(--accent);color:var(--accent-ink);font-weight:600}
+
+.foot{padding:16px 36px;border-top:1px solid var(--line);font:500 11px var(--mono);color:var(--muted);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+
+/* Modal */
+.modal{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.45);backdrop-filter:blur(6px)}
+.modal.open{display:flex}
+.sheet{width:min(900px,100%);max-height:88vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line2);border-radius:16px;overflow:hidden;animation:rise .2s cubic-bezier(0.16,1,0.3,1);box-shadow:0 24px 48px -12px rgba(0,0,0,.35)}
+.sheet.sm{width:min(460px,100%)}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line);background:var(--bg)}
+.sheet-body{padding:20px;overflow:auto}
+.x{background:none;border:0;color:var(--muted);cursor:pointer;font-size:15px;padding:4px 6px;border-radius:6px;transition:color .15s}
+.x:hover{color:var(--text)}
+
+.status-box{margin-top:14px;padding:12px;border-radius:9px;border:1px solid var(--line);background:var(--bg);font:12px var(--mono);color:var(--muted)}
+.progress{position:relative;height:3px;margin-top:12px;border-radius:9px;background:var(--line);overflow:hidden}
+.progress.on::after{content:"";position:absolute;inset:0;width:40%;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:slide 1.1s linear infinite}
+@keyframes slide{from{transform:translateX(-100%)}to{transform:translateX(260%)}}
+
+/* Markdown typography */
+.md h1{font-size:18px;margin:0 0 12px;font-weight:800;border-bottom:1px solid var(--line);padding-bottom:8px}
+.md h2{font-size:15px;margin:20px 0 8px;font-weight:700}
+.md h3{font-size:13.5px;margin:16px 0 6px;font-weight:700}
+.md p,.md li{color:var(--body);line-height:1.65;font-size:13px}
+.md ul,.md ol{padding-left:18px}
+.md table{width:100%;margin:14px 0;border-collapse:collapse;font-size:12px}
+.md th,.md td{border:1px solid var(--line);padding:8px 10px;text-align:left}
+.md th{background:var(--raised);color:var(--muted);font-weight:600}
+.md pre{background:var(--raised);padding:12px;border-radius:8px;overflow:auto}
+.md blockquote{margin:12px 0;padding-left:14px;border-left:3px solid var(--accent);color:var(--muted)}
+
+/* Toast */
+.toast{
+  position:fixed;right:20px;bottom:20px;z-index:60;display:flex;align-items:center;gap:9px;
+  padding:10px 14px;border-radius:10px;background:var(--inv);color:var(--inv-ink);
+  font:600 12px var(--mono);box-shadow:0 12px 30px -8px rgba(0,0,0,.35);
+  opacity:0;transform:translateY(10px);pointer-events:none;transition:.2s cubic-bezier(0.16,1,0.3,1);
+}
+.toast.show{opacity:1;transform:none}
+
+/* Responsiveness */
+@media (max-width:1020px){
+  .usecases{grid-template-columns:1fr}
+  .grid-2,.form-grid{grid-template-columns:1fr}
+}
+@media (max-width:840px){
+  .app{grid-template-columns:1fr}
+  .sidebar{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;padding:14px 18px}
+  .nav{flex-direction:row;overflow-x:auto;width:100%}
+  .side-foot{display:none}
+  .topbar{position:static;padding:18px 20px}
+  main{padding:18px 20px}
+  .foot{padding:16px 20px}
+}
+</style>
 </head>
-<body class="min-h-screen flex flex-col antialiased">
-
-  <!-- Top Navigation Bar -->
-  <header class="border-b border-slate-800 bg-slate-900/80 sticky top-0 z-50 backdrop-blur-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-500/30">
-          ⚡
-        </div>
-        <div>
-          <h1 class="text-lg font-bold bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">
-            SLM Benchmark & Diagnostics
-          </h1>
-          <p class="text-xs text-slate-400">Local Small Language Model Performance & Reliability Suite</p>
-        </div>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linejoin="round"/>
+        </svg>
       </div>
-
-      <div class="flex items-center space-x-3 text-xs">
-        <span id="ollama-status-badge" class="px-2.5 py-1 rounded-full font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          Ollama: Online
-        </span>
-        <span id="host-spec-badge" class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700 hidden sm:inline-block">
-          Host: Loading...
-        </span>
-        <a href="/docs" target="_blank" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition shadow-sm">
-          Swagger Docs ↗
-        </a>
-      </div>
-    </div>
-  </header>
-
-  <!-- Main Content Container -->
-  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-
-    <!-- KPI Summary Row -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="kpi-container">
-      <div class="glass-card rounded-2xl p-5 border border-slate-800">
-        <div class="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
-          <span>Overall Leader</span>
-          <span class="text-amber-400 text-base">🥇</span>
-        </div>
-        <div class="mt-2 text-2xl font-black text-white" id="kpi-top-model">—</div>
-        <div class="mt-1 text-xs text-indigo-400 font-medium" id="kpi-top-score">Loading score...</div>
-      </div>
-
-      <div class="glass-card rounded-2xl p-5 border border-slate-800">
-        <div class="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
-          <span>Speed Champion</span>
-          <span class="text-blue-400 text-base">⚡</span>
-        </div>
-        <div class="mt-2 text-2xl font-black text-white" id="kpi-fastest-speed">—</div>
-        <div class="mt-1 text-xs text-slate-400" id="kpi-fastest-model">Tokens / Sec</div>
-      </div>
-
-      <div class="glass-card rounded-2xl p-5 border border-slate-800">
-        <div class="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
-          <span>Lowest RAM Footprint</span>
-          <span class="text-emerald-400 text-base">🪶</span>
-        </div>
-        <div class="mt-2 text-2xl font-black text-white" id="kpi-lowest-memory">—</div>
-        <div class="mt-1 text-xs text-emerald-400 font-medium" id="kpi-lowest-model">Edge Viable</div>
-      </div>
-
-      <div class="glass-card rounded-2xl p-5 border border-slate-800">
-        <div class="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
-          <span>JSON Schema Reliability</span>
-          <span class="text-purple-400 text-base">🛡️</span>
-        </div>
-        <div class="mt-2 text-2xl font-black text-emerald-400" id="kpi-schema-rate">—</div>
-        <div class="mt-1 text-xs text-slate-400">Strict Pydantic Ticket Compliance</div>
-      </div>
-    </div>
-
-    <!-- Executive Recommendation Banner -->
-    <div class="glass-card rounded-2xl p-5 border border-indigo-500/30 bg-gradient-to-r from-indigo-950/40 via-slate-900 to-slate-900">
-      <div class="flex items-start space-x-3">
-        <div class="p-2 rounded-lg bg-indigo-500/20 text-indigo-300 font-bold text-lg">💡</div>
-        <div class="flex-grow">
-          <h2 class="text-sm font-semibold text-indigo-300 uppercase tracking-wide">Automated Diagnostic Verdict & Recommendation</h2>
-          <p class="mt-1 text-sm text-slate-200 leading-relaxed" id="executive-recommendation-text">
-            Analyzing telemetry from benchmark datastore...
-          </p>
-        </div>
-        <button onclick="openReportModal()" class="shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
-          📄 Full Academic Report
-        </button>
-      </div>
-    </div>
-
-    <!-- Charts Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div class="glass-card rounded-2xl p-5 border border-slate-800">
-        <h3 class="text-sm font-bold text-slate-200 mb-1 flex items-center gap-2">
-          <span>🚀 Generation Velocity vs. Memory Footprint</span>
-        </h3>
-        <p class="text-xs text-slate-400 mb-4">Throughput (Tokens/s) compared with active VRAM/RAM allocation (MB)</p>
-        <div class="h-64">
-          <canvas id="speedMemoryChart"></canvas>
-        </div>
-      </div>
-
-      <div class="glass-card rounded-2xl p-5 border border-slate-800">
-        <h3 class="text-sm font-bold text-slate-200 mb-1 flex items-center gap-2">
-          <span>⏱️ Latency Percentiles (Median P50 vs P95 Tail)</span>
-        </h3>
-        <p class="text-xs text-slate-400 mb-4">Measures inference consistency and tail latency in seconds (lower is better)</p>
-        <div class="h-64">
-          <canvas id="latencyChart"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- Leaderboard Table -->
-    <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
-      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-        <div>
-          <h3 class="text-base font-bold text-white flex items-center gap-2">
-            <span>🏆 Model Performance Leaderboard</span>
-          </h3>
-          <p class="text-xs text-slate-400">Ranked by normalized composite scoring (Speed, Schema, Memory, Latency)</p>
-        </div>
-        <div class="text-xs text-slate-400" id="total-samples-count">Total Datapoints: ...</div>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm text-slate-300">
-          <thead class="bg-slate-900/90 text-xs uppercase tracking-wider text-slate-400 border-b border-slate-800">
-            <tr>
-              <th class="px-6 py-3 font-semibold">Rank</th>
-              <th class="px-6 py-3 font-semibold">Model</th>
-              <th class="px-6 py-3 font-semibold">Composite Score</th>
-              <th class="px-6 py-3 font-semibold">Speed (tok/s)</th>
-              <th class="px-6 py-3 font-semibold">P95 Latency</th>
-              <th class="px-6 py-3 font-semibold">RAM Usage</th>
-              <th class="px-6 py-3 font-semibold">Schema Pass</th>
-              <th class="px-6 py-3 font-semibold">Deployment Tier</th>
-            </tr>
-          </thead>
-          <tbody id="leaderboard-tbody" class="divide-y divide-slate-800">
-            <tr>
-              <td colspan="8" class="px-6 py-6 text-center text-slate-500">Loading benchmark metrics...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Live Inference Playground & Tester -->
-    <div class="glass-card rounded-2xl p-6 border border-slate-800 space-y-6">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
-        <div>
-          <h3 class="text-base font-bold text-white flex items-center gap-2">
-            <span>🧪 Real-Time Live Inference Playground</span>
-          </h3>
-          <p class="text-xs text-slate-400">Trigger live inference against any local Ollama model to profile latency, tokens/s, and schema validation</p>
-        </div>
-        <span class="text-xs px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">
-          Ollama Client API
-        </span>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Target Candidate Model</label>
-          <select id="playground-model" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
-            <option value="llama3.2:3b">llama3.2:3b</option>
-            <option value="phi4-mini">phi4-mini</option>
-            <option value="mistral:7b">mistral:7b</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Evaluation Task Type</label>
-          <select id="playground-type" onchange="togglePromptMode()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
-            <option value="structured">Structured JSON (Pydantic Ticket Analysis)</option>
-            <option value="general">General Generation / Reasoning / Q&A</option>
-          </select>
-        </div>
-
-        <div>
-          <div class="flex justify-between items-center mb-1">
-            <label class="text-xs font-semibold text-slate-300">Temperature Setting</label>
-            <span id="temp-val" class="text-xs text-indigo-400 font-mono font-bold">0.0</span>
-          </div>
-          <input type="range" id="playground-temp" min="0" max="1" step="0.1" value="0.0" oninput="document.getElementById('temp-val').innerText = this.value" class="w-full accent-indigo-500">
-        </div>
-      </div>
-
-      <!-- Presets quick buttons -->
       <div>
-        <label class="block text-xs font-semibold text-slate-400 mb-1.5">Preset Sample Scenarios:</label>
-        <div class="flex flex-wrap gap-2 text-xs">
-          <button onclick="setPromptPreset('billing')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
-            💳 Billing Double Charge (Structured)
-          </button>
-          <button onclick="setPromptPreset('server')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
-            🚨 Production Server Down (Structured)
-          </button>
-          <button onclick="setPromptPreset('reasoning')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
-            🧠 Train Logic Riddle (General)
-          </button>
-          <button onclick="setPromptPreset('creative')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
-            ✨ Product Pitch Copy (General)
-          </button>
-        </div>
-      </div>
-
-      <!-- Prompt text area -->
-      <div>
-        <label class="block text-xs font-semibold text-slate-300 mb-1">Input Prompt / Ticket Content</label>
-        <textarea id="playground-prompt" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 font-mono" placeholder="Type prompt text or click a preset above..."></textarea>
-      </div>
-
-      <div class="flex items-center justify-between">
-        <button id="run-infer-btn" onclick="executeLiveInference()" class="px-6 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition flex items-center gap-2 shadow-lg shadow-indigo-600/30">
-          <span id="btn-spinner" class="hidden">⏳</span>
-          <span>⚡ Execute Real-Time Benchmark Inference</span>
-        </button>
-        <span class="text-xs text-slate-400">Streams live latency, throughput & memory telemetry</span>
-      </div>
-
-      <!-- Live Execution Telemetry Result Box -->
-      <div id="live-result-container" class="hidden border border-slate-800 rounded-xl bg-slate-950/70 p-5 space-y-4">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
-          <div class="flex items-center gap-2 text-xs">
-            <span class="font-bold text-white text-sm" id="result-model-name">—</span>
-            <span id="result-valid-badge" class="px-2 py-0.5 rounded font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              Valid JSON Schema
-            </span>
-          </div>
-
-          <div class="flex items-center gap-4 text-xs font-mono">
-            <span class="text-slate-400">Latency: <strong class="text-indigo-300 font-bold" id="result-latency">—</strong></span>
-            <span class="text-slate-400">Speed: <strong class="text-emerald-300 font-bold" id="result-speed">—</strong></span>
-            <span class="text-slate-400">RAM: <strong class="text-purple-300 font-bold" id="result-memory">—</strong></span>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">Inference Output Response:</label>
-          <pre id="result-output" class="bg-slate-900 border border-slate-800 rounded-lg p-4 text-xs text-slate-200 overflow-x-auto font-mono whitespace-pre-wrap"></pre>
-        </div>
+        <div class="brand-name">SLM Benchmark</div>
+        <div class="brand-sub">Telemetry &amp; diagnostics · v1.0</div>
       </div>
     </div>
+    
+    <nav class="nav">
+      <button class="nav-btn active" data-tab="overview"><span class="n">01</span>Overview</button>
+      <button class="nav-btn" data-tab="workbench"><span class="n">02</span>Inference workbench</button>
+      <button class="nav-btn" data-tab="stability"><span class="n">03</span>Temperature &amp; stability</button>
+    </nav>
 
-  </main>
+    <div class="side-foot">
+      <div class="status" id="ollama-status"><span class="dot"></span><span id="ollama-text">Checking…</span></div>
+      <div class="host" id="host-spec">Checking host…</div>
+      <div class="meta" id="sample-count">—</div>
+    </div>
+  </aside>
 
-  <!-- Report Modal -->
-  <div id="report-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="glass-card border border-slate-700 rounded-2xl max-w-4xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
-      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-        <div>
-          <h3 class="text-base font-bold text-white">📄 Academic Benchmark Evaluation Report</h3>
-          <p class="text-xs text-slate-400">Exported diagnostic findings for project submission</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <a href="/api/v1/analytics/report?download=true" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition">
-            ⬇ Download Markdown
-          </a>
-          <button onclick="closeReportModal()" class="text-slate-400 hover:text-white text-lg px-2">✕</button>
-        </div>
+  <div class="content">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow" id="eyebrow">Overview</p>
+        <h1 id="title">Model leaderboard</h1>
       </div>
-      <div class="p-6 overflow-y-auto flex-grow bg-slate-950 font-mono text-xs text-slate-300 whitespace-pre-wrap" id="report-modal-content">
-        Loading report...
+      <div class="actions">
+        <button class="btn" id="theme-btn" onclick="toggleTheme()">◑ Light</button>
+        <button class="btn" onclick="openModal('bench-modal')">▶ Run benchmark</button>
+        <button class="btn" onclick="openReport()">Report</button>
+        <a class="btn primary" href="/docs" target="_blank" rel="noopener">API ↗</a>
+      </div>
+    </header>
+
+    <main>
+      <!-- TAB 1: OVERVIEW -->
+      <section id="view-overview" class="view stack">
+        <div class="usecases" id="usecases"></div>
+
+        <div class="card verdict">
+          <div class="row">
+            <span class="eyebrow">Architectural verdict</span>
+            <span class="pill">Production analysis</span>
+            <button class="btn sm push" onclick="openReport()">Read academic report</button>
+          </div>
+          <p id="verdict">Synthesizing latency, throughput, and hardware headroom…</p>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h3>Throughput vs. memory</h3>
+                <p>The dashed frontier marks models that no other model beats on both axes. The enlarged marker is the selected use case.</p>
+              </div>
+              <span class="unit">tok/s · MB</span>
+            </div>
+            <div class="chart"><canvas id="pareto"></canvas></div>
+          </div>
+          
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h3>Latency spread</h3>
+                <p>Each bar runs from median (P50) to tail (P95) response time in seconds.</p>
+              </div>
+              <span class="unit">seconds · lower is better</span>
+            </div>
+            <div class="chart"><canvas id="latency"></canvas></div>
+          </div>
+        </div>
+
+        <div class="card table-card">
+          <div class="card-head">
+            <div>
+              <h3>Leaderboard</h3>
+              <p>Composite index: Throughput 35% · Schema fidelity 30% · RAM footprint 20% · Latency 15%</p>
+            </div>
+            <button class="btn sm" onclick="loadData()">↻ Refresh</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Model</th>
+                  <th>Composite</th>
+                  <th>Speed</th>
+                  <th>P50 / P95</th>
+                  <th>RAM</th>
+                  <th>Schema</th>
+                  <th>Target</th>
+                </tr>
+              </thead>
+              <tbody id="board"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: INFERENCE WORKBENCH -->
+      <section id="view-workbench" class="view hidden stack">
+        <div class="card stack">
+          <div class="card-head" style="margin:0">
+            <div>
+              <h3>Inference workbench</h3>
+              <p>Run on-demand inference against local SLMs with live telemetry and Pydantic schema validation.</p>
+            </div>
+            <span class="pill accent">Direct Ollama API</span>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label>Target model</label>
+              <select id="pg-model"><option>llama3.2:3b</option></select>
+            </div>
+            <div class="field">
+              <label>Evaluation mode</label>
+              <select id="pg-type" onchange="togglePromptMode()">
+                <option value="structured">Structured JSON · Pydantic ticket</option>
+                <option value="general">Unconstrained · reasoning / Q&amp;A</option>
+              </select>
+            </div>
+            <div class="field">
+              <div class="row between">
+                <label>Temperature</label>
+                <span id="temp-val" class="mono hot">0.0 · deterministic</span>
+              </div>
+              <input type="range" id="pg-temp" min="0" max="1" step="0.1" value="0">
+            </div>
+          </div>
+
+          <div class="field">
+            <span class="label">Presets</span>
+            <div class="presets" id="presets"></div>
+          </div>
+
+          <div class="field">
+            <div class="row between">
+              <label>Prompt</label>
+              <span class="mono faint" style="font-size:11px">⌘ / Ctrl + Enter to run</span>
+            </div>
+            <textarea id="pg-prompt" rows="4" placeholder="Type a prompt or pick a scenario above…"></textarea>
+          </div>
+
+          <div class="row">
+            <button id="run-btn" class="btn primary lg" onclick="runInference()">
+              <span id="run-label">Run inference</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="result" class="card stack hidden">
+          <div class="result-head">
+            <div class="row">
+              <b id="r-model" class="mono"></b>
+              <span id="r-badge" class="pill"></span>
+            </div>
+            <div class="metrics">
+              <div><span>Latency</span><b id="r-latency"></b></div>
+              <div><span>Speed</span><b id="r-speed"></b></div>
+              <div><span>RAM</span><b id="r-mem"></b></div>
+              <div id="r-tokens-box" class="hidden"><span>Tokens</span><b id="r-tokens"></b></div>
+            </div>
+          </div>
+          
+          <div id="r-fields" class="kv-grid hidden"></div>
+          
+          <div class="row between">
+            <span class="label">Output payload</span>
+            <button class="btn sm" onclick="copyOutput()">Copy payload</button>
+          </div>
+          <pre id="r-output"></pre>
+        </div>
+      </section>
+
+      <!-- TAB 3: TEMPERATURE & STABILITY -->
+      <section id="view-stability" class="view hidden stack">
+        <div class="card table-card">
+          <div class="card-head">
+            <div>
+              <h3>Temperature sensitivity &amp; token variance</h3>
+              <p>Behavioural drift across T = 0.0 (deterministic baseline) and T = 0.7 (exploratory sampling).</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>Temperature</th>
+                  <th>Runs</th>
+                  <th>Mean latency</th>
+                  <th>Mean tokens</th>
+                  <th>Token σ</th>
+                  <th>Behaviour</th>
+                </tr>
+              </thead>
+              <tbody id="stab-body"></tbody>
+            </table>
+          </div>
+        </div>
+        
+        <div class="callout">
+          <b>Diagnostic recommendation on temperature</b>
+          <p>For pipelines that need structured JSON (ticket classification, data extraction), set <code>temperature: 0.0</code>. Models hold zero schema violations with the least token divergence at T = 0.0. Reserve <code>temperature: 0.7</code> for open-ended creative and reasoning tasks.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div>SLM Benchmark Platform · MCA Research &amp; Diagnostic Framework</div>
+      <div>Local Ollama runtime · SQLite datastore</div>
+    </footer>
+  </div>
+</div>
+
+<!-- Benchmark Trigger Modal -->
+<div class="modal" id="bench-modal">
+  <div class="sheet sm">
+    <div class="sheet-head">
+      <b>Execute full benchmark suite</b>
+      <button class="x" onclick="closeModal('bench-modal')">✕</button>
+    </div>
+    <div class="sheet-body">
+      <p class="muted" style="margin:0;font-size:12.5px;line-height:1.6">
+        Runs every configured candidate (<span class="mono">llama3.2:3b, phi4-mini, mistral:7b</span>). Results update the SQLite and telemetry stores automatically.
+      </p>
+      <div class="status-box" id="bench-status">Ready to trigger</div>
+      <div class="progress" id="bench-bar"></div>
+      <div class="row end" style="margin-top:18px">
+        <button class="btn" onclick="closeModal('bench-modal')">Cancel</button>
+        <button class="btn primary" id="bench-start" onclick="startBenchmark()">Start suite run</button>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Footer -->
-  <footer class="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
-    <p>SLM Benchmark Platform • MCA Research & Diagnostic Framework • Evaluated with Ollama Runtime</p>
-  </footer>
+<!-- Academic Report Modal -->
+<div class="modal" id="report-modal">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <b>Academic benchmark diagnostic report</b>
+        <div class="sub">Formal empirical findings for project submission</div>
+      </div>
+      <div class="row">
+        <button class="btn sm" onclick="copyReport()">Copy Markdown</button>
+        <a class="btn primary sm" href="/api/v1/analytics/report?download=true">Download .md</a>
+        <button class="x" onclick="closeModal('report-modal')">✕</button>
+      </div>
+    </div>
+    <div class="sheet-body md" id="report-body"></div>
+  </div>
+</div>
 
-  <!-- Dashboard JavaScript Logic -->
-  <script>
-    let speedChartInstance = null;
-    let latencyChartInstance = null;
+<!-- Notification Toast -->
+<div class="toast" id="toast">
+  <span id="toast-icon">✓</span>
+  <span id="toast-msg"></span>
+</div>
 
-    // Load initial analytics data
-    async function fetchAnalyticsSummary() {
-      try {
-        const res = await fetch('/api/v1/analytics/summary');
-        const data = await res.json();
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => Number(n).toLocaleString();
+const getVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
-        if (data.error) {
-          console.error(data.error);
-          return;
-        }
+const SERIES = {
+  light: ['#10B981', '#0A0A0A', '#4F46E5', '#F59E0B', '#EF4444'],
+  dark:  ['#C6F432', '#F5F5F5', '#818CF8', '#FBBF24', '#F87171']
+};
+const series = () => SERIES[document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'];
+const S = { data: null, useCase: 'enterprise', pareto: null, latency: null, names: [], report: '' };
+const colorFor = m => series()[Math.max(0, S.data?.leaderboard?.findIndex(x => x.model === m) ?? 0) % 5];
 
-        renderDashboard(data);
-      } catch (err) {
-        console.error('Error fetching analytics:', err);
+const CASES = [
+  { id:'enterprise', name:'Enterprise JSON', hint:'Strict schema pipelines',
+    pick: L => [...L].sort((a,b) => a.rank - b.rank)[0],
+    val: m => m.composite_score, unit:'/ 100 composite', sub: m => `${m.schema_validity_pct}% schema pass` },
+  { id:'throughput', name:'Max throughput', hint:'Latency-sensitive generation',
+    pick: L => [...L].sort((a,b) => b.avg_tokens_per_sec - a.avg_tokens_per_sec)[0],
+    val: m => m.avg_tokens_per_sec, unit:'tok/s', sub: m => `${fmt(m.avg_memory_mb)} MB resident` },
+  { id:'edge', name:'Edge footprint', hint:'Constrained devices',
+    pick: L => [...L].sort((a,b) => a.avg_memory_mb - b.avg_memory_mb)[0],
+    val: m => fmt(m.avg_memory_mb), unit:'MB RAM', sub: m => `${m.avg_tokens_per_sec} tok/s` }
+];
+const winner = () => S.data?.leaderboard?.length ? CASES.find(c => c.id === S.useCase).pick(S.data.leaderboard).model : '';
+
+function applyChartTheme() {
+  Chart.defaults.color = getVar('--muted');
+  Chart.defaults.borderColor = getVar('--line');
+  Chart.defaults.font.family = "'Manrope', system-ui, sans-serif";
+  Object.assign(Chart.defaults.plugins.tooltip, {
+    backgroundColor: getVar('--inv'), titleColor: getVar('--inv-ink'), bodyColor: getVar('--inv-ink'),
+    borderColor: getVar('--line'), borderWidth: 1, padding: 10, cornerRadius: 8,
+    titleFont: { family:'JetBrains Mono', size:12, weight:'bold' }, bodyFont: { family:'JetBrains Mono', size:11 }
+  });
+}
+applyChartTheme();
+
+function toggleTheme() {
+  const dark = document.documentElement.dataset.theme !== 'dark';
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  $('theme-btn').textContent = dark ? '◑ Light' : '◐ Dark';
+  applyChartTheme();
+  if (S.data) { renderPareto(); renderLatency(); }
+}
+
+function toast(msg, icon = '✓') {
+  const t = $('toast');
+  $('toast-msg').textContent = msg;
+  $('toast-icon').textContent = icon;
+  t.classList.add('show');
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+const TABS = { 
+  overview:['Overview','Model leaderboard'], 
+  workbench:['Workbench','Live inference'], 
+  stability:['Stability','Temperature sensitivity'] 
+};
+
+function switchTab(k) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === k));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('hidden', v.id !== 'view-' + k));
+  $('eyebrow').textContent = TABS[k][0];
+  $('title').textContent = TABS[k][1];
+  if (k === 'overview') { 
+    setTimeout(() => { S.pareto?.resize(); S.latency?.resize(); }, 50); 
+  }
+}
+document.querySelectorAll('.nav-btn').forEach(b => b.onclick = () => switchTab(b.dataset.tab));
+
+function sortedBoard() {
+  const L = [...S.data.leaderboard];
+  if (S.useCase === 'throughput') L.sort((a,b) => b.avg_tokens_per_sec - a.avg_tokens_per_sec);
+  else if (S.useCase === 'edge') L.sort((a,b) => a.avg_memory_mb - b.avg_memory_mb);
+  else L.sort((a,b) => a.rank - b.rank);
+  return L;
+}
+
+function renderCases() {
+  const L = S.data.leaderboard;
+  $('usecases').innerHTML = CASES.map((c, i) => {
+    const m = c.pick(L);
+    return `<button class="case${c.id === S.useCase ? ' active' : ''}" data-id="${c.id}">
+      <div class="row between"><span class="case-name">${c.name}</span><span class="idx">0${i+1}</span></div>
+      <div class="case-model">${esc(m.model)}</div>
+      <div class="case-metric"><b>${esc(c.val(m))}</b><span>${c.unit}</span></div>
+      <div class="case-sub">${esc(c.hint)} · ${esc(c.sub(m))}</div>
+    </button>`;
+  }).join('');
+  document.querySelectorAll('.case').forEach(b => b.onclick = () => {
+    S.useCase = b.dataset.id;
+    renderCases(); renderBoard(); renderPareto();
+  });
+}
+
+function renderBoard() {
+  const W = winner();
+  $('board').innerHTML = sortedBoard().map(m => `<tr class="${m.model === W ? 'winner' : ''}">
+    <td><span class="rank${m.rank === 1 ? ' r1' : ''}">${m.rank}</span></td>
+    <td><div class="mname">${esc(m.model)}</div><div class="sub">${m.prompts_run} evaluations</div></td>
+    <td><div class="score"><b>${m.composite_score}</b><div class="bar"><i style="width:${m.composite_score}%"></i></div></div></td>
+    <td class="mono">${m.avg_tokens_per_sec}<small> tok/s</small></td>
+    <td class="mono">${m.p50_latency}s <span class="faint">/</span> <span class="hot">${m.p95_latency}s</span></td>
+    <td class="mono">${fmt(m.avg_memory_mb)}<small> MB</small></td>
+    <td><span class="pill ok">${m.schema_validity_pct}%</span></td>
+    <td><span class="pill">${esc(m.deploy_tier)}</span></td>
+  </tr>`).join('');
+}
+
+function frontier(L) {
+  const s = [...L].sort((a,b) => a.avg_memory_mb - b.avg_memory_mb);
+  let best = -Infinity; const f = [];
+  for (const p of s) if (p.avg_tokens_per_sec > best) { best = p.avg_tokens_per_sec; f.push(p); }
+  return f;
+}
+
+const namesPlugin = {
+  id: 'names',
+  afterDatasetsDraw(c) {
+    const meta = c.getDatasetMeta(1);
+    if (!meta || !meta.data) return;
+    const ctx = c.ctx;
+    ctx.save();
+    ctx.font = "600 11px 'JetBrains Mono'";
+    ctx.fillStyle = getVar('--text');
+    meta.data.forEach((p, i) => {
+      if (S.names[i]) ctx.fillText(S.names[i], p.x + 12, p.y + 4);
+    });
+    ctx.restore();
+  }
+};
+
+function renderPareto() {
+  const L = S.data.leaderboard, W = winner();
+  S.names = L.map(m => m.model);
+  const xy = m => ({ x: m.avg_memory_mb, y: m.avg_tokens_per_sec });
+  S.pareto?.destroy();
+  S.pareto = new Chart($('pareto'), {
+    type: 'scatter',
+    plugins: [namesPlugin],
+    data: { datasets: [
+      { 
+        label:'Frontier', 
+        data: frontier(L).map(xy), 
+        showLine:true, 
+        borderColor: getVar('--text'), 
+        borderDash:[5,5], 
+        borderWidth:1.5, 
+        pointRadius:0, 
+        order:2 
+      },
+      { 
+        label:'Models', 
+        data: L.map(xy), 
+        backgroundColor: L.map(m => colorFor(m.model)), 
+        borderColor: getVar('--text'), 
+        borderWidth:2,
+        pointRadius: L.map(m => m.model === W ? 11 : 7), 
+        pointHoverRadius: 13, 
+        order:1 
       }
-    }
-
-    function renderDashboard(data) {
-      const telemetry = data.telemetry || {};
-      const leaderboard = data.leaderboard || [];
-
-      // Host badges
-      document.getElementById('host-spec-badge').innerText = `Host: ${telemetry.os || 'macOS'} (${telemetry.total_ram_gb || 16} GB)`;
-      if (telemetry.ollama_running) {
-        document.getElementById('ollama-status-badge').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Ollama: Online';
-      }
-
-      // Populate Model Dropdown
-      const modelSelect = document.getElementById('playground-model');
-      if (telemetry.installed_models && telemetry.installed_models.length > 0) {
-        modelSelect.innerHTML = '';
-        telemetry.installed_models.forEach(m => {
-          const opt = document.createElement('option');
-          opt.value = m;
-          opt.innerText = m;
-          modelSelect.appendChild(opt);
-        });
-      }
-
-      // KPIs
-      if (leaderboard.length > 0) {
-        const top = leaderboard[0];
-        document.getElementById('kpi-top-model').innerText = top.model;
-        document.getElementById('kpi-top-score').innerText = `Composite Score: ${top.composite_score}/100`;
-
-        const fastest = [...leaderboard].sort((a,b) => b.avg_tokens_per_sec - a.avg_tokens_per_sec)[0];
-        document.getElementById('kpi-fastest-speed').innerText = `${fastest.avg_tokens_per_sec} tok/s`;
-        document.getElementById('kpi-fastest-model').innerText = `Leader: ${fastest.model}`;
-
-        const lightest = [...leaderboard].sort((a,b) => a.avg_memory_mb - b.avg_memory_mb)[0];
-        document.getElementById('kpi-lowest-memory').innerText = `${lightest.avg_memory_mb} MB`;
-        document.getElementById('kpi-lowest-model').innerText = `Leader: ${lightest.model}`;
-
-        document.getElementById('kpi-schema-rate').innerText = `${top.schema_validity_pct}%`;
-      }
-
-      // Executive recommendation
-      if (data.executive_recommendation) {
-        document.getElementById('executive-recommendation-text').innerHTML = data.executive_recommendation.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>');
-      }
-
-      document.getElementById('total-samples-count').innerText = `Total Datapoints: ${data.total_datapoints}`;
-
-      // Populate Leaderboard Table
-      const tbody = document.getElementById('leaderboard-tbody');
-      tbody.innerHTML = '';
-      leaderboard.forEach(item => {
-        const rankMedal = item.rank === 1 ? '🥇 1' : (item.rank === 2 ? '🥈 2' : (item.rank === 3 ? '🥉 3' : `#${item.rank}`));
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-slate-800/40 transition';
-        row.innerHTML = `
-          <td class="px-6 py-4 font-bold text-white">${rankMedal}</td>
-          <td class="px-6 py-4 font-semibold text-white">${item.model}</td>
-          <td class="px-6 py-4">
-            <div class="flex items-center gap-2">
-              <span class="font-bold text-emerald-400">${item.composite_score}</span>
-              <div class="w-16 bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                <div class="bg-emerald-400 h-1.5 rounded-full" style="width: ${item.composite_score}%"></div>
-              </div>
-            </div>
-          </td>
-          <td class="px-6 py-4 font-mono">${item.avg_tokens_per_sec} tps</td>
-          <td class="px-6 py-4 font-mono text-slate-300">${item.p95_latency}s</td>
-          <td class="px-6 py-4 font-mono text-slate-300">${item.avg_memory_mb} MB</td>
-          <td class="px-6 py-4 font-semibold text-emerald-400">${item.schema_validity_pct}%</td>
-          <td class="px-6 py-4">
-            <span class="px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-300 border border-slate-700">
-              ${item.deploy_tier}
-            </span>
-          </td>
-        `;
-        tbody.appendChild(row);
-      });
-
-      // Render Charts
-      renderCharts(leaderboard);
-    }
-
-    function renderCharts(leaderboard) {
-      const labels = leaderboard.map(m => m.model);
-      const speeds = leaderboard.map(m => m.avg_tokens_per_sec);
-      const memories = leaderboard.map(m => m.avg_memory_mb);
-      const p50s = leaderboard.map(m => m.p50_latency);
-      const p95s = leaderboard.map(m => m.p95_latency);
-
-      // Speed vs Memory Chart
-      const ctx1 = document.getElementById('speedMemoryChart').getContext('2d');
-      if (speedChartInstance) speedChartInstance.destroy();
-      speedChartInstance = new Chart(ctx1, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              label: 'Generation Speed (tok/s)',
-              data: speeds,
-              backgroundColor: 'rgba(99, 102, 241, 0.8)',
-              borderRadius: 6,
-              yAxisID: 'y',
-            },
-            {
-              label: 'Memory Footprint (MB)',
-              data: memories,
-              backgroundColor: 'rgba(16, 185, 129, 0.5)',
-              borderRadius: 6,
-              yAxisID: 'y1',
-            }
-          ]
+    ]},
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend:{display:false},
+        tooltip:{ callbacks:{
+          title: i => i[0].datasetIndex === 1 ? (S.names[i[0].dataIndex] || '') : '',
+          label: c => `${fmt(c.raw.x)} MB · ${c.raw.y} tok/s`
+        }}
+      },
+      scales: {
+        x:{ 
+          title:{display:true,text:'Active memory (MB)',font:{family:'Manrope',weight:'bold'}}, 
+          ticks:{font:{family:'JetBrains Mono',size:10}} 
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              type: 'linear',
-              display: true,
-              position: 'left',
-              title: { display: true, text: 'Tokens / Sec', color: '#818cf8' },
-              grid: { color: 'rgba(255,255,255,0.05)' },
-              ticks: { color: '#94a3b8' }
-            },
-            y1: {
-              type: 'linear',
-              display: true,
-              position: 'right',
-              title: { display: true, text: 'RAM (MB)', color: '#34d399' },
-              grid: { drawOnChartArea: false },
-              ticks: { color: '#94a3b8' }
-            },
-            x: {
-              ticks: { color: '#f1f5f9' },
-              grid: { color: 'rgba(255,255,255,0.05)' }
-            }
-          },
-          plugins: {
-            legend: { labels: { color: '#e2e8f0', font: { size: 11 } } }
-          }
+        y:{ 
+          title:{display:true,text:'Generation speed (tok/s)',font:{family:'Manrope',weight:'bold'}}, 
+          ticks:{font:{family:'JetBrains Mono',size:10}} 
         }
-      });
+      }
+    }
+  });
+}
 
-      // Latency Chart
-      const ctx2 = document.getElementById('latencyChart').getContext('2d');
-      if (latencyChartInstance) latencyChartInstance.destroy();
-      latencyChartInstance = new Chart(ctx2, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              label: 'Median Latency P50 (s)',
-              data: p50s,
-              backgroundColor: 'rgba(56, 189, 248, 0.8)',
-              borderRadius: 6,
-            },
-            {
-              label: 'Tail Latency P95 (s)',
-              data: p95s,
-              backgroundColor: 'rgba(244, 63, 94, 0.7)',
-              borderRadius: 6,
-            }
-          ]
+function renderLatency() {
+  const L = S.data.leaderboard;
+  S.latency?.destroy();
+  S.latency = new Chart($('latency'), {
+    type: 'bar',
+    data: { 
+      labels: L.map(m => m.model), 
+      datasets: [{
+        data: L.map(m => [m.p50_latency, m.p95_latency]),
+        backgroundColor: L.map(m => colorFor(m.model)),
+        borderColor: getVar('--text'), 
+        borderWidth: 1.5,
+        borderRadius: 99, 
+        borderSkipped: false, 
+        barThickness: 14
+      }]
+    },
+    options: {
+      indexAxis:'y', 
+      responsive:true, 
+      maintainAspectRatio:false,
+      plugins: { 
+        legend:{display:false}, 
+        tooltip:{ callbacks:{ label: c => `P50 ${c.raw[0]}s → P95 ${c.raw[1]}s` } } 
+      },
+      scales: {
+        x:{ 
+          beginAtZero:true, 
+          title:{display:true,text:'Seconds (lower is better)',font:{family:'Manrope',weight:'bold'}},
+          ticks:{font:{family:'JetBrains Mono',size:10}}
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              title: { display: true, text: 'Latency (seconds)', color: '#94a3b8' },
-              grid: { color: 'rgba(255,255,255,0.05)' },
-              ticks: { color: '#94a3b8' }
-            },
-            x: {
-              ticks: { color: '#f1f5f9' },
-              grid: { color: 'rgba(255,255,255,0.05)' }
-            }
-          },
-          plugins: {
-            legend: { labels: { color: '#e2e8f0', font: { size: 11 } } }
-          }
+        y:{ 
+          grid:{display:false}, 
+          ticks:{font:{family:'JetBrains Mono',size:11,weight:'bold'}} 
         }
-      });
-    }
-
-    // Presets
-    const presets = {
-      billing: {
-        type: 'structured',
-        text: 'I was charged twice for my subscription this month, can someone look into this?'
-      },
-      server: {
-        type: 'structured',
-        text: 'Our production database crashed and customers cannot check out, this needs immediate escalation.'
-      },
-      reasoning: {
-        type: 'general',
-        text: 'A farmer has 17 sheep, all but 9 die. How many are left? Explain your step-by-step reasoning.'
-      },
-      creative: {
-        type: 'general',
-        text: 'Write a catchy tagline and a 2-sentence marketing pitch for a local artisanal espresso bar.'
       }
-    };
-
-    function setPromptPreset(key) {
-      const p = presets[key];
-      if (!p) return;
-      document.getElementById('playground-type').value = p.type;
-      document.getElementById('playground-prompt').value = p.text;
     }
+  });
+}
 
-    // Live Inference Execution
-    async function executeLiveInference() {
-      const model = document.getElementById('playground-model').value;
-      const prompt_type = document.getElementById('playground-type').value;
-      const prompt = document.getElementById('playground-prompt').value.trim();
-      const temperature = parseFloat(document.getElementById('playground-temp').value);
+function renderVerdict(t) {
+  const clean = String(t).replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '');
+  $('verdict').innerHTML = esc(clean).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
 
-      if (!prompt) {
-        alert('Please enter or select a prompt first.');
-        return;
-      }
+function renderStability(list) {
+  if (!list.length) { 
+    $('stab-body').innerHTML = '<tr><td colspan="7" class="empty">No temperature matrix datapoints recorded.</td></tr>'; 
+    return; 
+  }
+  const max = Math.max(...list.map(x => x.token_std_dev), 0.01);
+  $('stab-body').innerHTML = list.map(x => `<tr>
+    <td class="mname">${esc(x.model)}</td>
+    <td><span class="pill${x.temperature === 0 ? ' accent' : ''}">T = ${x.temperature.toFixed(1)}</span></td>
+    <td class="mono">${x.runs_recorded} runs</td>
+    <td class="mono">${x.mean_latency.toFixed(2)}s</td>
+    <td class="mono">${x.mean_tokens.toFixed(1)}</td>
+    <td><div class="sd"><span class="mono">σ ${x.token_std_dev.toFixed(2)}</span><div class="bar thin"><i style="width:${(x.token_std_dev / max * 100).toFixed(0)}%"></i></div></div></td>
+    <td class="muted">${esc(x.behavior)}</td>
+  </tr>`).join('');
+}
 
-      const btn = document.getElementById('run-infer-btn');
-      const spinner = document.getElementById('btn-spinner');
-      btn.disabled = true;
-      spinner.classList.remove('hidden');
+function render(d) {
+  S.data = d;
+  const t = d.telemetry || {}, L = d.leaderboard || [];
+  $('host-spec').textContent = `${t.os || 'Darwin arm64'} · ${t.cpu_threads || 10} threads · ${t.total_ram_gb || 16} GB RAM`;
+  $('ollama-text').textContent = t.ollama_running ? 'Ollama active' : 'Ollama offline';
+  $('ollama-status').classList.toggle('off', !t.ollama_running);
+  $('sample-count').textContent = `${d.total_datapoints} datapoints · ${d.total_models} models`;
+  
+  if (t.installed_models?.length) {
+    const sel = $('pg-model'), cur = sel.value;
+    sel.innerHTML = t.installed_models.map(m => `<option${m === cur || (!cur && m.includes('llama3.2:3b')) ? ' selected' : ''}>${esc(m)}</option>`).join('');
+  }
+  
+  if (d.executive_recommendation) renderVerdict(d.executive_recommendation);
+  if (!L.length) { 
+    $('board').innerHTML = '<tr><td colspan="8" class="empty">No benchmark runs yet. Run a benchmark to populate telemetry.</td></tr>'; 
+    return; 
+  }
+  renderCases(); renderBoard(); renderPareto(); renderLatency();
+}
 
-      try {
-        const res = await fetch('/api/v1/infer/single', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model, prompt, prompt_type, temperature })
-        });
-        const result = await res.json();
+async function loadData() {
+  try {
+    const res = await fetch('/api/v1/analytics/summary');
+    const d = await res.json();
+    if (d.error) throw new Error(d.error);
+    render(d);
+    renderStability(d.temperature_stability || []);
+  } catch (e) {
+    console.error(e);
+    toast('Could not load analytics', '✕');
+  }
+}
 
-        // Show result box
-        const container = document.getElementById('live-result-container');
-        container.classList.remove('hidden');
+const PRESETS = {
+  billing:   { label:'Billing double charge', color:'var(--accent)', type:'structured', temp:0,   text:'I was charged twice for my subscription this month on invoice #INV-9821, can someone please reverse the charge?' },
+  server:    { label:'Critical outage',       color:'var(--text)',   type:'structured', temp:0,   text:'CRITICAL ALERT: Production Postgres database cluster is unresponsive and CPU pegged at 100%. Customer checkout is completely offline.' },
+  reasoning: { label:'Logic riddle',          color:'var(--muted)',  type:'general',    temp:0,   text:'A farmer has 17 sheep, all but 9 die. How many sheep does the farmer have left? Walk through your reasoning step by step.' },
+  creative:  { label:'Marketing copy',        color:'var(--faint)',  type:'general',    temp:0.7, text:'Write a compelling product tagline and a two-sentence pitch for a privacy-first, local-offline AI assistant for software engineers.' }
+};
 
-        document.getElementById('result-model-name').innerText = result.model;
-        document.getElementById('result-latency').innerText = `${result.latency.toFixed(2)}s`;
-        document.getElementById('result-speed').innerText = `${result.tokens_per_second.toFixed(1)} tok/s`;
-        document.getElementById('result-memory').innerText = result.memory_mb ? `${result.memory_mb.toFixed(0)} MB` : 'N/A';
+$('presets').innerHTML = Object.entries(PRESETS).map(([k, p]) =>
+  `<button class="chip" onclick="setPreset('${k}')"><i style="background:${p.color}"></i>${p.label}</button>`).join('');
 
-        const validBadge = document.getElementById('result-valid-badge');
-        if (result.prompt_type === 'structured') {
-          if (result.valid_json) {
-            validBadge.className = 'px-2 py-0.5 rounded font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
-            validBadge.innerText = '✔ Valid Pydantic Ticket Schema';
-          } else {
-            validBadge.className = 'px-2 py-0.5 rounded font-medium bg-rose-500/20 text-rose-400 border border-rose-500/30';
-            validBadge.innerText = '✘ Schema Validation Error';
-          }
-        } else {
-          validBadge.className = 'px-2 py-0.5 rounded font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30';
-          validBadge.innerText = 'General Inference';
-        }
+function tempLabel(v) {
+  v = +v;
+  $('temp-val').textContent = v === 0 ? '0.0 · deterministic' : v.toFixed(1) + (v >= 0.7 ? ' · exploratory' : '');
+}
 
-        const outBox = document.getElementById('result-output');
-        if (result.parsed) {
-          outBox.innerText = JSON.stringify(result.parsed, null, 2);
-        } else {
-          outBox.innerText = result.response;
-        }
-      } catch (err) {
-        alert('Error during inference: ' + err);
-      } finally {
+function setPreset(k, quiet) {
+  const p = PRESETS[k];
+  $('pg-type').value = p.type;
+  $('pg-prompt').value = p.text;
+  $('pg-temp').value = p.temp;
+  tempLabel(p.temp);
+  if (!quiet) toast(`Loaded “${p.label}”`);
+}
+
+function togglePromptMode() {
+  if ($('pg-type').value === 'structured') { $('pg-temp').value = 0; tempLabel(0); }
+}
+
+async function runInference() {
+  const prompt = $('pg-prompt').value.trim();
+  if (!prompt) return toast('Enter a prompt first', '⚠');
+  const btn = $('run-btn');
+  btn.classList.add('busy');
+  $('run-label').textContent = 'Evaluating in local Ollama…';
+  
+  try {
+    const r = await fetch('/api/v1/infer/single', {
+      method:'POST', 
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ 
+        model:$('pg-model').value, 
+        prompt, 
+        prompt_type:$('pg-type').value, 
+        temperature:parseFloat($('pg-temp').value) 
+      })
+    });
+    if (!r.ok) { 
+      const e = await r.json().catch(() => ({})); 
+      throw new Error(e.detail || 'HTTP ' + r.status); 
+    }
+    const x = await r.json();
+    renderResult(x);
+    toast(`Completed in ${x.latency.toFixed(2)}s`);
+  } catch (e) {
+    toast('Inference error: ' + e.message, '✕');
+  } finally {
+    btn.classList.remove('busy');
+    $('run-label').textContent = 'Run inference';
+  }
+}
+
+function renderResult(x) {
+  $('result').classList.remove('hidden');
+  $('r-model').textContent = x.model;
+  $('r-latency').textContent = x.latency.toFixed(2) + 's';
+  $('r-speed').textContent = x.tokens_per_second.toFixed(1) + ' tok/s';
+  $('r-mem').textContent = x.memory_mb ? Math.round(x.memory_mb) + ' MB' : 'N/A';
+  
+  if (x.output_tokens !== undefined) {
+    $('r-tokens-box').classList.remove('hidden');
+    $('r-tokens').textContent = `${x.output_tokens} out (${(x.generation_time || 0).toFixed(2)}s)`;
+  }
+  
+  const badge = $('r-badge'), fields = $('r-fields');
+  fields.innerHTML = '';
+  fields.classList.add('hidden');
+  
+  if (x.prompt_type !== 'structured') {
+    badge.className = 'pill'; badge.textContent = 'General inference';
+  } else if (!x.valid_json) {
+    badge.className = 'pill bad'; badge.textContent = '✕ Schema validation failed';
+  } else {
+    badge.className = 'pill ok'; badge.textContent = '✓ Valid Pydantic schema';
+    if (x.parsed && typeof x.parsed === 'object') {
+      fields.classList.remove('hidden');
+      fields.innerHTML = Object.entries(x.parsed).map(([k, v]) => {
+        const shown = typeof v === 'boolean' ? (v ? 'Yes' : 'No') : typeof v === 'object' ? JSON.stringify(v) : String(v);
+        const hot = (k === 'requires_escalation' && v) || (k === 'priority' && v === 'high');
+        return `<div class="kv"><span>${esc(k.replace(/_/g, ' '))}</span><b class="${hot ? 'hot' : ''}">${esc(k === 'priority' ? shown.toUpperCase() : shown)}</b></div>`;
+      }).join('');
+    }
+  }
+  $('r-output').textContent = x.parsed ? JSON.stringify(x.parsed, null, 2) : x.response;
+}
+
+function copyOutput() {
+  navigator.clipboard.writeText($('r-output').textContent);
+  toast('Copied payload');
+}
+
+function openModal(id) { $(id).classList.add('open'); }
+function closeModal(id) { $(id).classList.remove('open'); }
+document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open')); });
+
+async function openReport() {
+  openModal('report-modal');
+  $('report-body').innerHTML = '<p class="muted">Loading report…</p>';
+  try {
+    S.report = await (await fetch('/api/v1/analytics/report')).text();
+    $('report-body').innerHTML = marked.parse(S.report);
+  } catch (e) {
+    $('report-body').textContent = 'Failed to load report: ' + e;
+  }
+}
+
+function copyReport() {
+  if (!S.report) return;
+  navigator.clipboard.writeText(S.report);
+  toast('Markdown copied');
+}
+
+async function startBenchmark() {
+  const btn = $('bench-start'), box = $('bench-status'), bar = $('bench-bar');
+  btn.disabled = true;
+  box.textContent = 'Dispatching run to FastAPI runner…';
+  bar.classList.add('on');
+  try {
+    const d = await (await fetch('/api/v1/benchmark/run', { 
+      method:'POST', 
+      headers:{'Content-Type':'application/json'}, 
+      body:'{}' 
+    })).json();
+    box.textContent = `Dispatched: ${d.message}`;
+    const timer = setInterval(async () => {
+      const s = await (await fetch('/api/v1/benchmark/status')).json();
+      box.textContent = `${s.last_status} · ${s.total_evaluated} evaluated`;
+      if (!s.is_running) {
+        clearInterval(timer);
+        bar.classList.remove('on');
         btn.disabled = false;
-        spinner.classList.add('hidden');
+        toast('Benchmark run finished');
+        setTimeout(() => { closeModal('bench-modal'); loadData(); }, 1000);
       }
-    }
+    }, 3000);
+  } catch (e) {
+    box.textContent = 'Error: ' + e;
+    btn.disabled = false;
+    bar.classList.remove('on');
+  }
+}
 
-    // Academic report modal
-    async function openReportModal() {
-      const modal = document.getElementById('report-modal');
-      const content = document.getElementById('report-modal-content');
-      modal.classList.remove('hidden');
-      content.innerText = 'Loading benchmark report...';
+$('pg-temp').oninput = e => tempLabel(e.target.value);
+$('pg-prompt').addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); runInference(); }
+});
 
-      try {
-        const res = await fetch('/api/v1/analytics/report');
-        const text = await res.text();
-        content.innerText = text;
-      } catch (e) {
-        content.innerText = 'Failed to load report: ' + e;
-      }
-    }
-
-    function closeReportModal() {
-      document.getElementById('report-modal').classList.add('hidden');
-    }
-
-    // Set initial preset
-    setPromptPreset('billing');
-    fetchAnalyticsSummary();
-  </script>
+setPreset('billing', true);
+loadData();
+</script>
 </body>
 </html>
-
